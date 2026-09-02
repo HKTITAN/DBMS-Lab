@@ -1,0 +1,42 @@
+[
+  {
+    "id": "02-09-2026",
+    "folder": "02-09-2026",
+    "date": "02 Sep 2026",
+    "experiment": "3",
+    "title": "SQL Joins",
+    "subtitle": "NATURAL, INNER, LEFT & RIGHT OUTER JOIN",
+    "topic": "Combine rows from departments and employees using four join types.",
+    "sqlFile": "joins.sql",
+    "report": "DBMS_Lab_Joins_Report.pdf",
+    "color": "#2E75B6",
+    "legacyApp": null
+  },
+  {
+    "id": "26-08-2026",
+    "folder": "26-08-2026",
+    "date": "26 Aug 2026",
+    "experiment": "2",
+    "title": "CREATE & ALTER TABLE",
+    "subtitle": "Rename column department → faculty",
+    "topic": "Create an employees table, seed data, then rename a column with ALTER TABLE.",
+    "sqlFile": "employees.sql",
+    "report": "DBMS_Lab_Employees_Report.pdf",
+    "color": "#FF9600",
+    "legacyApp": null
+  },
+  {
+    "id": "19-08-2026",
+    "folder": "19-08-2026",
+    "date": "19 Aug 2026",
+    "experiment": "1",
+    "title": "Employee Directory",
+    "subtitle": "Schema design, CRUD & views",
+    "topic": "Full interactive employee directory with departments, editable grid, and SQL compiler.",
+    "sqlFile": null,
+    "sqlSetup": ["schema.sql", "seed.sql"],
+    "report": null,
+    "color": "#58CC02",
+    "legacyApp": "19-08-2026/index.html"
+  }
+]
