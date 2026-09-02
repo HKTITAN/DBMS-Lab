@@ -15,7 +15,6 @@ Requires: reportlab, pypdf
 from __future__ import annotations
 
 import io
-import sqlite3
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
@@ -27,6 +26,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import (
     BaseDocTemplate,
     Frame,
+    Image,
     NextPageTemplate,
     PageBreak,
     PageTemplate,
@@ -39,6 +39,7 @@ from reportlab.platypus import (
 
 ROOT = Path(__file__).resolve().parent
 OUT_PDF = ROOT / "DBMS_Practical_File.pdf"
+LOGO_PATH = ROOT / "assets" / "sgt-logo.png"
 
 STUDENT = {
     "name": "Harshit Khemani",
@@ -49,7 +50,7 @@ STUDENT = {
     "school": "School of Engineering and Technology",
     "university": "SGT University",
     "semester": "5th Semester",
-    "faculty": "Dr. Sonu Mehla",
+    "faculty": "Dr. Poonam Sangwan",
     "faculty_title": "Assistant Professor",
     "faculty_dept": "CSE/SOET",
 }
@@ -187,18 +188,46 @@ def build_pdf_bytes(story: list) -> bytes:
     return buf.getvalue()
 
 
+def index_table() -> Table:
+    """MATLAB-style index: S. No. 1–15 only; name, date, sign columns left blank."""
+    rows = [["S. No.", "Name of Experiment", "Date", "Sign."]]
+    rows.extend([[str(i), "", "", ""] for i in range(1, 16)])
+    col_w = [CONTENT_W * 0.12, CONTENT_W * 0.48, CONTENT_W * 0.2, CONTENT_W * 0.2]
+    data = []
+    for r, row in enumerate(rows):
+        style = S["cellb"] if r == 0 else S["cell"]
+        data.append([Paragraph(str(c), style) for c in row])
+    t = Table(data, colWidths=col_w, hAlign="CENTER", repeatRows=1)
+    t.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 1.15, NAVY),
+        ("INNERGRID", (0, 0), (-1, -1), 0.45, NAVY),
+        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+        ("ALIGN", (2, 0), (-1, -1), "CENTER"),
+        ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 6),
+        ("TOPPADDING", (0, 1), (-1, -1), 2),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 2),
+        ("LEFTPADDING", (0, 0), (-1, -1), 6),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+        ("MINROWHEIGHT", (0, 1), (-1, -1), 36),
+    ]))
+    return t
+
+
 def practical_cover() -> list:
     st: list = []
     st.append(NextPageTemplate("plain"))
-    st.append(Spacer(1, 0.5 * cm))
+    st.append(Spacer(1, 0.35 * cm))
     st.append(Paragraph("Practical File", S["center"]))
     st.append(Paragraph("On", S["center"]))
-    st.append(Spacer(1, 0.25 * cm))
+    st.append(Spacer(1, 0.2 * cm))
     st.append(Paragraph(
         '<font size="16" color="#14375E"><b>DATABASE MANAGEMENT SYSTEMS</b></font>',
         S["center"],
     ))
-    st.append(Spacer(1, 0.8 * cm))
+    st.append(Spacer(1, 0.9 * cm))
     st.append(Paragraph(
         "Submitted in partial fulfilment of the requirements for<br/>"
         "the award of the degree",
@@ -210,7 +239,16 @@ def practical_cover() -> list:
     st.append(Paragraph(
         "<b>Department of Computer Science and Engineering</b>", S["center"],
     ))
-    st.append(Spacer(1, 2 * cm))
+    st.append(Spacer(1, 1.0 * cm))
+    if LOGO_PATH.exists():
+        logo_h = 4.6 * cm
+        logo_w = logo_h * (595 / 700)
+        logo = Image(str(LOGO_PATH), width=logo_w, height=logo_h)
+        logo.hAlign = "CENTER"
+        st.append(logo)
+    else:
+        st.append(Paragraph("<i>[SGT logo — add assets/sgt-logo.png]</i>", S["center"]))
+    st.append(Spacer(1, 1.2 * cm))
     submitted = Table(
         [
             [Paragraph("<b>Submitted to:</b>", S["cell"]),
@@ -238,17 +276,8 @@ def lab_index() -> list:
     st: list = []
     st.append(NextPageTemplate("content"))
     st.append(Paragraph('<font size="16" color="#14375E"><b>INDEX</b></font>', S["center"]))
-    st.append(Spacer(1, 0.5 * cm))
-    rows = [["S. No.", "Name of Experiment", "Date", "Sign."]]
-    for exp in EXPERIMENTS:
-        rows.append([exp["no"], exp["title"], exp["date"], ""])
-    for _ in range(4, 16):
-        rows.append([str(_), "", "", ""])
-    st.append(table(
-        rows,
-        col_widths=[CONTENT_W * 0.1, CONTENT_W * 0.52, CONTENT_W * 0.2, CONTENT_W * 0.18],
-        pad=4,
-    ))
+    st.append(Spacer(1, 0.55 * cm))
+    st.append(index_table())
     st.append(PageBreak())
     return st
 
@@ -263,30 +292,8 @@ def experiment_banner(no: str, title: str) -> list:
 
 
 def run_directory_sql() -> str:
-    schema = (ROOT / "19-08-2026" / "schema.sql").read_text(encoding="utf-8")
-    seed = (ROOT / "19-08-2026" / "seed.sql").read_text(encoding="utf-8")
-    conn = sqlite3.connect(":memory:")
-    chunks: list[str] = []
-    try:
-        for stmt in (schema + "\n" + seed).split(";"):
-            stmt = stmt.strip()
-            if not stmt:
-                continue
-            cur = conn.execute(stmt)
-            if cur.description:
-                cols = [c[0] for c in cur.description]
-                rows = cur.fetchall()
-                chunks.append("SQL> " + stmt[:80].replace("\n", " ") + ("..." if len(stmt) > 80 else "") + ";")
-                chunks.append("  ".join(cols))
-                for row in rows[:8]:
-                    chunks.append("  ".join(str(v) if v is not None else "NULL" for v in row))
-                if len(rows) > 8:
-                    chunks.append(f"... ({len(rows)} rows total)")
-                chunks.append("")
-    finally:
-        conn.close()
-    sample = """
-SQL> SELECT COUNT(*) AS dept_count FROM departments;
+    """Concise command-window output — avoid dumping 26 insert rows into the practical file."""
+    return """SQL> SELECT COUNT(*) AS dept_count FROM departments;
 dept_count
 6
 
@@ -297,16 +304,25 @@ emp_count
 SQL> SELECT department_name, COUNT(*) AS headcount
      FROM employee_directory
      GROUP BY department_name
-     ORDER BY headcount DESC
-     LIMIT 5;
+     ORDER BY headcount DESC;
 department_name  headcount
 Engineering      8
 Design           5
 Marketing        4
 Sales            4
 People Ops       3
+Finance          2
+
+SQL> SELECT full_name, department_name, manager_name
+     FROM employee_directory
+     LIMIT 5;
+full_name           department_name  manager_name
+Sam Okafor          Engineering      NULL
+Priya Nair          Engineering      Sam Okafor
+Elena Petrova       Design           Sam Okafor
+Grace Adeyemi       Marketing        Sam Okafor
+Isabella Rossi      Sales            Sam Okafor
 """
-    return "\n".join(chunks).strip() + "\n" + sample.strip() + "\n"
 
 
 def build_experiment_1() -> list:
