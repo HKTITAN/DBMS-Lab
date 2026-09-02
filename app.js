@@ -43,11 +43,12 @@ function assetUrl(path) {
   return `/${clean}`;
 }
 
-/* ── Routing ─────────────────────────────────────────────── */
+const PRACTICAL_FILE = 'DBMS_Practical_File.pdf';
 
 function parseRoute() {
   const path = location.pathname.replace(/\/$/, '') || '/';
   if (path === '/' || path === '/index.html') return { view: 'home' };
+  if (path === '/practical-file') return { view: 'practical' };
   const m = path.match(/^\/lab\/([^/]+)(?:\/([^/]+))?$/);
   if (!m) return { view: 'home' };
   return { view: 'lab', id: m[1], tab: m[2] || null };
@@ -221,9 +222,11 @@ function renderTabBar(lab, activeTab) {
 
 function renderTopbarActions(lab) {
   const el = document.getElementById('topbarActions');
-  el.innerHTML = lab
-    ? `<a class="btn btn-neutral btn-sm" href="/">${icon('arrow')} All Labs</a>`
-    : '';
+  if (!lab) {
+    el.innerHTML = `<a class="btn btn-info btn-sm" href="/practical-file">${icon('file')} Practical File</a>`;
+    return;
+  }
+  el.innerHTML = `<a class="btn btn-neutral btn-sm" href="/">${icon('arrow')} All Labs</a>`;
 }
 
 /* ── Home ────────────────────────────────────────────────── */
@@ -245,6 +248,9 @@ function renderHome() {
         <span class="stat-pill">SQLite in-browser</span>
         <span class="stat-pill">Semester 5</span>
       </div>
+      <p class="hero-sub" style="margin-top:1rem">
+        <a class="btn btn-info btn-sm" href="/practical-file">${icon('file')} Open compiled practical file</a>
+      </p>
     </section>
     <div class="lab-grid" id="labGrid"></div>
   `;
@@ -276,6 +282,35 @@ function buildLabCard(lab) {
     </div>
   `;
   return link;
+}
+
+function renderPracticalFile() {
+  currentLab = null;
+  editorCM = null;
+  setPageTitle('Practical File');
+  document.getElementById('brandSub').textContent = 'Compiled file · all experiments';
+  const el = document.getElementById('topbarActions');
+  el.innerHTML = `<a class="btn btn-neutral btn-sm" href="/">${icon('arrow')} All Labs</a>`;
+
+  const main = document.getElementById('main-content');
+  const pdfUrl = assetUrl(PRACTICAL_FILE);
+  main.innerHTML = `
+    <div class="lab-header">
+      <div>
+        <span class="lab-date">Semester 5 · DBMS Lab</span>
+        <h1 class="page-title">Practical File</h1>
+        <p class="hero-sub">Cover, index, and all experiments in one PDF — same format as the MATLAB practical file.</p>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <div><h2 class="panel-title">DBMS_Practical_File.pdf</h2><p class="sub">Experiments 1–3 · Employee Directory, CREATE/ALTER, SQL Joins</p></div>
+      </div>
+      <div class="pdf-frame-wrap">
+        <iframe class="pdf-frame" src="${escapeHtml(pdfUrl)}" title="DBMS Practical File PDF"></iframe>
+      </div>
+    </div>
+  `;
 }
 
 /* ── Lab shell ───────────────────────────────────────────── */
@@ -519,6 +554,10 @@ async function render() {
   const route = parseRoute();
   if (route.view === 'home') {
     renderHome();
+    return;
+  }
+  if (route.view === 'practical') {
+    renderPracticalFile();
     return;
   }
   await renderLab(route.id, route.tab);

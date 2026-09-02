@@ -14,6 +14,7 @@ Each lab has its own page with in-app tabs — no external redirects:
 | `/lab/02-09-2026/sql` | SQL Joins — playground |
 | `/lab/26-08-2026/report` | CREATE & ALTER TABLE — PDF |
 | `/lab/19-08-2026/departments` | Employee directory (embedded) |
+| `/practical-file` | Compiled practical file (all experiments) |
 
 Open [`index.html`](index.html) locally or run a static server to develop:
 
@@ -43,9 +44,10 @@ python -m http.server 8080
 ```bash
 cd 26-08-2026 && python generate_report.py
 cd 02-09-2026 && python generate_report.py
+python generate_practical_file.py   # merged DBMS_Practical_File.pdf
 ```
 
-Requires Python 3 and `reportlab`.
+Requires Python 3, `reportlab`, and `pypdf`.
 
 ## Stack
 
