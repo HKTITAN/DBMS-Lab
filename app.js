@@ -1,8 +1,6 @@
 'use strict';
 
-/* ============================================================
-   DBMS Lab Hub — browse reports, run lab SQL in-browser
-   ============================================================ */
+/* DBMS Lab Hub — path-based routing, per-lab pages, embedded directory */
 
 let SQLmod = null;
 let db = null;
@@ -12,7 +10,6 @@ let editorCM = null;
 let labSqlText = '';
 let labSetup = [];
 let labExamples = [];
-let queriesRun = 0;
 
 const ICON_PATHS = {
   play: '<path d="M6 4.5v15l13-7.5-13-7.5Z"/>',
@@ -22,7 +19,9 @@ const ICON_PATHS = {
   arrow: '<path d="M19 12H5M12 5l-7 7 7 7"/>',
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
   db: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/>',
-  external: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>',
+  code: '<path d="m8 9-3 3 3 3"/><path d="m16 9 3 3-3 3"/><path d="M13 6 11 18"/>',
 };
 
 function icon(name) {
@@ -33,29 +32,66 @@ function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
-/* ============================================================
-   SQL parsing
-   ============================================================ */
+function quoteIdent(id) {
+  return '"' + String(id).replace(/"/g, '""') + '"';
+}
+
+/* ── Routing ─────────────────────────────────────────────── */
+
+function parseRoute() {
+  const path = location.pathname.replace(/\/$/, '') || '/';
+  if (path === '/' || path === '/index.html') return { view: 'home' };
+  const m = path.match(/^\/lab\/([^/]+)(?:\/([^/]+))?$/);
+  if (!m) return { view: 'home' };
+  return { view: 'lab', id: m[1], tab: m[2] || null };
+}
+
+function labHref(id, tab) {
+  return tab ? `/lab/${id}/${tab}` : `/lab/${id}`;
+}
+
+function defaultTab(lab) {
+  if (lab.type === 'directory') return lab.defaultTab || 'departments';
+  if (lab.report) return lab.defaultTab || 'report';
+  return 'sql';
+}
+
+function sqlTabs(lab) {
+  const tabs = [];
+  if (lab.report) tabs.push({ id: 'report', label: 'Report', icon: 'file' });
+  tabs.push({ id: 'sql', label: 'SQL Playground', icon: 'play' });
+  tabs.push({ id: 'schema', label: 'Schema', icon: 'db' });
+  return tabs;
+}
+
+function labTabs(lab) {
+  if (lab.type === 'directory') {
+    return (lab.directoryTabs || []).map((t) => ({
+      id: t.id,
+      label: t.label,
+      icon: t.id === 'compiler' ? 'code' : t.id === 'data' ? 'table' : t.id === 'schema' ? 'db' : 'grid',
+    }));
+  }
+  return sqlTabs(lab);
+}
+
+function setPageTitle(title) {
+  document.title = title ? `${title} · DBMS Lab` : 'DBMS Lab Hub';
+}
+
+/* ── SQL parsing ───────────────────────────────────────── */
 
 function stripSqlComments(sql) {
   const lines = [];
   for (const line of sql.split('\n')) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('--')) continue;
-    if (line.includes('--')) {
-      lines.push(line.slice(0, line.indexOf('--')));
-    } else {
-      lines.push(line);
-    }
+    if (line.trim().startsWith('--')) continue;
+    lines.push(line.includes('--') ? line.slice(0, line.indexOf('--')) : line);
   }
   return lines.join('\n');
 }
 
 function splitStatements(sql) {
-  return stripSqlComments(sql)
-    .split(';')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  return stripSqlComments(sql).split(';').map((s) => s.trim()).filter(Boolean);
 }
 
 function stmtKind(stmt) {
@@ -82,27 +118,17 @@ function parseLabSql(text) {
   for (const stmt of statements) {
     const kind = stmtKind(stmt);
     if (kind === 'SELECT' || kind === 'PRAGMA') {
-      const label = pendingLabel || `Query ${++exampleIdx}`;
-      examples.push({ label, sql: stmt + ';' });
+      examples.push({ label: pendingLabel || `Query ${++exampleIdx}`, sql: stmt + ';' });
       pendingLabel = '';
     } else {
       setup.push(stmt);
-      if (kind !== 'INSERT' && kind !== 'CREATE' && kind !== 'DROP' && kind !== 'ALTER') {
-        pendingLabel = '';
-      }
+      if (!['INSERT', 'CREATE', 'DROP', 'ALTER'].includes(kind)) pendingLabel = '';
     }
   }
-
-  return { setup, examples, statements };
+  return { setup, examples };
 }
 
-/* ============================================================
-   DB helpers
-   ============================================================ */
-
-function quoteIdent(id) {
-  return '"' + String(id).replace(/"/g, '""') + '"';
-}
+/* ── DB ──────────────────────────────────────────────────── */
 
 function runSetup(stmts) {
   if (db) { try { db.close(); } catch (e) { /* noop */ } }
@@ -115,25 +141,20 @@ function runSQL(sqlText) {
   try {
     const started = performance.now();
     const results = db.exec(sqlText);
-    const elapsedMs = performance.now() - started;
-    queriesRun += 1;
-    return { ok: true, results, elapsedMs, rowsModified: db.getRowsModified() };
+    return { ok: true, results, elapsedMs: performance.now() - started, rowsModified: db.getRowsModified() };
   } catch (err) {
-    queriesRun += 1;
     return { ok: false, error: err.message };
   }
 }
 
 function listUserTables() {
   const res = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name");
-  if (!res.length) return [];
-  return res[0].values.map((r) => r[0]);
+  return res.length ? res[0].values.map((r) => r[0]) : [];
 }
 
 function getColumnInfo(table) {
   const res = db.exec(`PRAGMA table_info(${quoteIdent(table)})`);
-  if (!res.length) return [];
-  return res[0].values.map((r) => r[1]);
+  return res.length ? res[0].values.map((r) => r[1]) : [];
 }
 
 function refreshHintTables() {
@@ -143,29 +164,6 @@ function refreshHintTables() {
   editorCM.setOption('hintOptions', { tables: hints });
 }
 
-/* ============================================================
-   Routing
-   ============================================================ */
-
-function parseRoute() {
-  const hash = location.hash.replace(/^#\/?/, '');
-  if (!hash || hash === 'home') return { view: 'home' };
-  const m = hash.match(/^lab\/([^/]+)(?:\/(\w+))?$/);
-  if (m) return { view: 'lab', id: m[1], tab: m[2] || 'report' };
-  return { view: 'home' };
-}
-
-function navigate(view, id, tab) {
-  if (view === 'home') location.hash = '#/';
-  else location.hash = `#/lab/${id}${tab && tab !== 'report' ? `/${tab}` : ''}`;
-}
-
-window.addEventListener('hashchange', render);
-
-/* ============================================================
-   Data loading
-   ============================================================ */
-
 async function fetchText(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`Could not load ${path} (${res.status})`);
@@ -174,13 +172,11 @@ async function fetchText(path) {
 
 async function loadLabAssets(lab) {
   let combined = '';
-  if (lab.sqlFile) {
-    combined = await fetchText(`${lab.folder}/${lab.sqlFile}`);
-  } else if (lab.sqlSetup) {
+  if (lab.sqlFile) combined = await fetchText(`${lab.folder}/${lab.sqlFile}`);
+  else if (lab.sqlSetup) {
     const parts = await Promise.all(lab.sqlSetup.map((f) => fetchText(`${lab.folder}/${f}`)));
     combined = parts.join('\n\n');
   }
-
   labSqlText = combined;
   const parsed = parseLabSql(combined);
   labSetup = parsed.setup;
@@ -189,9 +185,7 @@ async function loadLabAssets(lab) {
   ];
 }
 
-/* ============================================================
-   Toasts
-   ============================================================ */
+/* ── Toasts ──────────────────────────────────────────────── */
 
 function showToast(kind, message) {
   const stack = document.getElementById('toastStack');
@@ -201,27 +195,43 @@ function showToast(kind, message) {
   toast.innerHTML = `${icon(kind === 'error' ? 'alert' : kind === 'success' ? 'check' : 'info')}<span></span>`;
   toast.querySelector('span').textContent = message;
   stack.appendChild(toast);
-  setTimeout(() => {
-    toast.classList.add('leaving');
-    setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  setTimeout(() => { toast.classList.add('leaving'); setTimeout(() => toast.remove(), 300); }, 3500);
 }
 
-/* ============================================================
-   Render: Home
-   ============================================================ */
+/* ── Tab bar (real links) ────────────────────────────────── */
+
+function renderTabBar(lab, activeTab) {
+  const tabs = labTabs(lab);
+  return `
+    <nav class="tabbar" aria-label="${escapeHtml(lab.title)} sections">
+      ${tabs.map((t) => {
+        const current = t.id === activeTab;
+        return `<a class="tab${current ? ' is-active' : ''}" href="${labHref(lab.id, t.id)}"${current ? ' aria-current="page"' : ''}>${icon(t.icon)}<span class="tab-label">${escapeHtml(t.label)}</span></a>`;
+      }).join('')}
+    </nav>`;
+}
+
+function renderTopbarActions(lab) {
+  const el = document.getElementById('topbarActions');
+  el.innerHTML = lab
+    ? `<a class="btn btn-neutral btn-sm" href="/">${icon('arrow')} All Labs</a>`
+    : '';
+}
+
+/* ── Home ────────────────────────────────────────────────── */
 
 function renderHome() {
   currentLab = null;
   editorCM = null;
-  document.getElementById('brandSub').textContent = 'SGT University · Reports & SQL Playground';
-  document.getElementById('topbarActions').innerHTML = '';
+  setPageTitle(null);
+  document.getElementById('brandSub').textContent = 'SGT University · Semester 5';
+  renderTopbarActions(null);
 
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <section class="hero">
-      <h2>Lab Sessions</h2>
-      <p class="hero-sub">Open experiment reports as PDFs and run each lab's SQL in a real in-browser SQLite engine.</p>
+      <h1 class="page-title">Lab Sessions</h1>
+      <p class="hero-sub">Each experiment has its own page — open reports, run SQL, and explore schemas without leaving this site.</p>
     </section>
     <div class="lab-grid" id="labGrid"></div>
   `;
@@ -231,95 +241,96 @@ function renderHome() {
 }
 
 function buildLabCard(lab) {
-  const card = document.createElement('article');
-  card.className = 'lab-card';
-  card.style.setProperty('--lab-color', lab.color);
-  card.innerHTML = `
+  const tab = defaultTab(lab);
+  const href = labHref(lab.id, tab);
+  const link = document.createElement('a');
+  link.className = 'lab-card';
+  link.href = href;
+  link.style.setProperty('--lab-color', lab.color);
+  link.innerHTML = `
     <div class="lab-card-accent"></div>
     <div class="lab-card-body">
-      <span class="lab-date">Exp ${lab.experiment} · ${escapeHtml(lab.date)}</span>
-      <h3>${escapeHtml(lab.title)}</h3>
+      <span class="lab-date">Exp ${escapeHtml(lab.experiment)} · ${escapeHtml(lab.date)}</span>
+      <h2 class="lab-card-title">${escapeHtml(lab.title)}</h2>
       <p class="lab-sub">${escapeHtml(lab.subtitle)}</p>
       <p class="lab-topic">${escapeHtml(lab.topic)}</p>
-      <div class="lab-card-actions">
-        ${lab.report ? `<button class="btn btn-primary btn-sm" data-action="report" type="button">${icon('file')} Report</button>` : ''}
-        <button class="btn btn-info btn-sm" data-action="sql" type="button">${icon('play')} Run SQL</button>
-        ${lab.legacyApp ? `<a class="btn btn-neutral btn-sm" href="${escapeHtml(lab.legacyApp)}" target="_blank" rel="noopener">${icon('external')} Full app</a>` : ''}
-      </div>
+      <span class="lab-card-cta">Open lab →</span>
     </div>
   `;
-
-  card.querySelector('[data-action="report"]')?.addEventListener('click', () => navigate('lab', lab.id, 'report'));
-  card.querySelector('[data-action="sql"]')?.addEventListener('click', () => navigate('lab', lab.id, 'sql'));
-  card.addEventListener('click', (ev) => {
-    if (ev.target.closest('button, a')) return;
-    navigate('lab', lab.id, lab.report ? 'report' : 'sql');
-  });
-
-  return card;
+  return link;
 }
 
-/* ============================================================
-   Render: Lab detail
-   ============================================================ */
+/* ── Lab shell ───────────────────────────────────────────── */
 
 async function renderLab(id, tab) {
   const lab = labs.find((l) => l.id === id);
-  if (!lab) { navigate('home'); return; }
+  if (!lab) {
+    history.replaceState(null, '', '/');
+    renderHome();
+    return;
+  }
+
+  const tabs = labTabs(lab).map((t) => t.id);
+  let activeTab = tab || defaultTab(lab);
+  if (!tabs.includes(activeTab)) activeTab = defaultTab(lab);
+
+  if (!tab || tab !== activeTab) {
+    history.replaceState(null, '', labHref(id, activeTab));
+  }
 
   currentLab = lab;
-  const hasReport = !!lab.report;
-  const effectiveTab = tab === 'report' && !hasReport ? 'sql' : tab;
-
-  document.getElementById('brandSub').textContent = `${lab.date} · ${lab.title}`;
-  document.getElementById('topbarActions').innerHTML = `
-    <button class="btn btn-neutral btn-sm" id="backBtn" type="button">${icon('arrow')} All labs</button>
-  `;
-  document.getElementById('backBtn').addEventListener('click', () => navigate('home'));
+  setPageTitle(`${lab.title} — ${labTabs(lab).find((t) => t.id === activeTab)?.label || activeTab}`);
+  document.getElementById('brandSub').textContent = `${lab.date} · Experiment ${lab.experiment}`;
+  renderTopbarActions(lab);
 
   const main = document.getElementById('main-content');
   main.innerHTML = `
     <div class="lab-header">
       <div>
         <span class="lab-date">Experiment ${escapeHtml(lab.experiment)}</span>
-        <h2>${escapeHtml(lab.title)}</h2>
+        <h1 class="page-title">${escapeHtml(lab.title)}</h1>
         <p class="hero-sub">${escapeHtml(lab.subtitle)}</p>
       </div>
-      ${lab.legacyApp ? `<a class="btn btn-neutral btn-sm" href="${escapeHtml(lab.legacyApp)}" target="_blank" rel="noopener">${icon('external')} Open full interactive app</a>` : ''}
     </div>
-    <nav class="tabbar" role="tablist" aria-label="Lab views">
-      ${hasReport ? `<button class="tab" role="tab" data-tab="report" aria-selected="${effectiveTab === 'report'}">${icon('file')}<span class="tab-label">Report</span></button>` : ''}
-      <button class="tab" role="tab" data-tab="sql" aria-selected="${effectiveTab === 'sql'}">${icon('play')}<span class="tab-label">SQL Playground</span></button>
-      <button class="tab" role="tab" data-tab="schema" aria-selected="${effectiveTab === 'schema'}">${icon('db')}<span class="tab-label">Schema</span></button>
-    </nav>
-    <section class="panel" id="labPanel"></section>
+    ${renderTabBar(lab, activeTab)}
+    <section class="panel" id="labPanel" aria-live="polite"></section>
   `;
 
-  main.querySelectorAll('.tab').forEach((btn) => {
-    btn.addEventListener('click', () => navigate('lab', lab.id, btn.dataset.tab));
-  });
+  if (lab.type === 'directory') {
+    renderDirectoryPanel(activeTab);
+    return;
+  }
 
   try {
     await loadLabAssets(lab);
     runSetup(labSetup);
   } catch (err) {
     document.getElementById('labPanel').innerHTML = `
-      <div class="banner banner-error">${icon('alert')}<div><strong>Could not load lab SQL.</strong><br>${escapeHtml(err.message)}<br><small>Serve this folder over HTTP (e.g. GitHub Pages or <code>python -m http.server</code>).</small></div></div>`;
+      <div class="banner banner-error">${icon('alert')}<div><strong>Could not load lab SQL.</strong><br>${escapeHtml(err.message)}</div></div>`;
     return;
   }
 
-  if (effectiveTab === 'report') renderReportPanel();
-  else if (effectiveTab === 'sql') renderSqlPanel();
+  if (activeTab === 'report') renderReportPanel();
+  else if (activeTab === 'sql') renderSqlPanel();
   else renderSchemaPanel();
+}
+
+function renderDirectoryPanel(tab) {
+  const panel = document.getElementById('labPanel');
+  const src = `/${currentLab.folder}/index.html?embed=1&tab=${encodeURIComponent(tab)}`;
+  panel.innerHTML = `
+    <div class="embed-wrap">
+      <iframe class="embed-frame" src="${src}" title="${escapeHtml(currentLab.title)} — ${escapeHtml(tab)}" loading="lazy"></iframe>
+    </div>
+  `;
 }
 
 function renderReportPanel() {
   const panel = document.getElementById('labPanel');
-  const pdfUrl = `${currentLab.folder}/${currentLab.report}`;
+  const pdfUrl = `/${currentLab.folder}/${currentLab.report}`;
   panel.innerHTML = `
     <div class="panel-head">
-      <div><h3>Lab Report (PDF)</h3><p class="sub">${escapeHtml(currentLab.report)}</p></div>
-      <a class="btn btn-neutral btn-sm" href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener">${icon('external')} Open in new tab</a>
+      <div><h2 class="panel-title">Lab Report</h2><p class="sub">${escapeHtml(currentLab.report)}</p></div>
     </div>
     <div class="pdf-frame-wrap">
       <iframe class="pdf-frame" src="${escapeHtml(pdfUrl)}" title="Lab report PDF"></iframe>
@@ -331,7 +342,7 @@ function renderSqlPanel() {
   const panel = document.getElementById('labPanel');
   panel.innerHTML = `
     <div class="panel-head">
-      <div><h3>SQL Playground</h3><p class="sub">Real SQLite via sql.js · ${escapeHtml(currentLab.sqlFile || currentLab.sqlSetup?.join(' + ') || '')}</p></div>
+      <div><h2 class="panel-title">SQL Playground</h2><p class="sub">Real SQLite via sql.js · ${escapeHtml(currentLab.sqlFile || '')}</p></div>
       <button class="btn btn-danger-ghost btn-sm" id="resetDbBtn" type="button">Reset database</button>
     </div>
     <div class="compiler-layout">
@@ -339,7 +350,7 @@ function renderSqlPanel() {
         <div class="chip-row" id="exampleChips"></div>
         <div class="cm-shell" id="editorHost"></div>
         <div class="editor-toolbar">
-          <span class="kbd-hint"><kbd>Ctrl</kbd>/<kbd>⌘</kbd>+<kbd>Enter</kbd> to run</span>
+          <span class="kbd-hint"><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to run</span>
           <button class="btn btn-primary" id="runBtn" type="button">${icon('play')} Run query</button>
         </div>
       </div>
@@ -374,7 +385,8 @@ function renderSqlPanel() {
   });
   refreshHintTables();
 
-  panel.querySelector('#runBtn').addEventListener('click', runEditorQuery);
+  const runBtn = panel.querySelector('#runBtn');
+  runBtn.addEventListener('click', runEditorQuery);
   panel.querySelector('#resetDbBtn').addEventListener('click', () => {
     runSetup(labSetup);
     refreshHintTables();
@@ -386,8 +398,17 @@ function runEditorQuery() {
   if (!editorCM) return;
   const sql = editorCM.getValue().trim();
   if (!sql) return;
+  const runBtn = document.getElementById('runBtn');
+  if (runBtn) {
+    runBtn.disabled = true;
+    runBtn.setAttribute('aria-busy', 'true');
+  }
   renderQueryResult(runSQL(sql));
   refreshHintTables();
+  if (runBtn) {
+    runBtn.disabled = false;
+    runBtn.removeAttribute('aria-busy');
+  }
 }
 
 function renderQueryResult(result) {
@@ -401,18 +422,18 @@ function renderQueryResult(result) {
 
   const meta = document.createElement('div');
   meta.className = 'result-meta';
-  meta.innerHTML = `<span class="ok">${icon('check')} Success</span><span>${result.elapsedMs.toFixed(1)} ms</span>`;
+  meta.innerHTML = `<span class="ok">${icon('check')} Success</span><span class="metric">${result.elapsedMs.toFixed(1)}&nbsp;ms</span>`;
   card.appendChild(meta);
 
   if (!result.results.length) {
     const rowsWord = result.rowsModified === 1 ? 'row' : 'rows';
-    meta.insertAdjacentHTML('beforeend', `<span>${result.rowsModified} ${rowsWord} affected</span>`);
+    meta.insertAdjacentHTML('beforeend', `<span class="metric">${result.rowsModified} ${rowsWord} affected</span>`);
     card.insertAdjacentHTML('beforeend', `<div class="banner banner-success">${icon('check')}<div>Statement executed — no result set.</div></div>`);
     return;
   }
 
   result.results.forEach(({ columns, values }) => {
-    meta.insertAdjacentHTML('beforeend', `<span>${values.length} row${values.length === 1 ? '' : 's'}</span>`);
+    meta.insertAdjacentHTML('beforeend', `<span class="metric">${values.length} row${values.length === 1 ? '' : 's'}</span>`);
     const wrap = document.createElement('div');
     wrap.className = 'data-table-wrap scroll-x';
     const table = document.createElement('table');
@@ -444,7 +465,7 @@ function renderSchemaPanel() {
     return;
   }
 
-  let html = `<div class="panel-head"><div><h3>Live Schema</h3><p class="sub">From the in-memory database for this lab.</p></div></div><div class="schema-stack">`;
+  let html = `<div class="panel-head"><div><h2 class="panel-title">Live Schema</h2><p class="sub">From the in-memory database for this lab.</p></div></div><div class="schema-stack">`;
   tables.forEach((t) => {
     const cols = getColumnInfo(t);
     const countRes = db.exec(`SELECT COUNT(*) FROM ${quoteIdent(t)}`);
@@ -454,7 +475,7 @@ function renderSchemaPanel() {
     html += `
       <div class="card schema-card">
         <div class="schema-card-head">
-          <h4>${escapeHtml(t)}</h4>
+          <h3 class="schema-name">${escapeHtml(t)}</h3>
           <span class="schema-count">${count} row${count === 1 ? '' : 's'}</span>
         </div>
         <p class="schema-cols">${cols.map(escapeHtml).join(' · ')}</p>
@@ -465,9 +486,7 @@ function renderSchemaPanel() {
   panel.innerHTML = html;
 }
 
-/* ============================================================
-   Main render + init
-   ============================================================ */
+/* ── Init ────────────────────────────────────────────────── */
 
 async function render() {
   const route = parseRoute();
@@ -480,8 +499,7 @@ async function render() {
 
 async function init() {
   try {
-    const res = await fetch('labs.json');
-    labs = await res.json();
+    labs = await (await fetch('/labs.json')).json();
   } catch (err) {
     document.getElementById('main-content').innerHTML = `
       <div class="banner banner-error">${icon('alert')}<div><strong>Could not load labs.json</strong><br>${escapeHtml(err.message)}</div></div>`;
@@ -492,11 +510,12 @@ async function init() {
     SQLmod = await initSqlJs({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/sql.js@1.14.2/dist/${f}` });
   } catch (err) {
     document.getElementById('main-content').innerHTML = `
-      <div class="banner banner-error">${icon('alert')}<div><strong>Could not start sql.js</strong><br>${escapeHtml(err.message)}</div></div>`;
+      <div class="banner banner-error">${icon('alert')}<div><strong>Could not start sql.js</strong><br>${escapeHtml(err.message)}<br><small>Check your internet connection and reload.</small></div></div>`;
     return;
   }
 
-  if (!location.hash) location.hash = '#/';
+  document.getElementById('loadingShell')?.remove();
+  window.addEventListener('popstate', render);
   await render();
 }
 

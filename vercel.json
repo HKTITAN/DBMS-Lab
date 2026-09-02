@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/lab/:id/:tab", "destination": "/index.html" },
+    { "source": "/lab/:id", "destination": "/index.html" }
+  ]
+}

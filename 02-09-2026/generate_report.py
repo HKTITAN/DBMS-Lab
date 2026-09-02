@@ -315,16 +315,21 @@ def schema_er_diagram(width: float) -> Drawing:
     )
     _table_box(
         d, right_x, y, right_w, 118, "employees",
-        ["PK  empID    INTEGER", "    empName  TEXT", "FK  deptID   INTEGER", "    salary   NUMERIC", "", "7 rows"],
+        ["PK  empID      INTEGER", "    empName    TEXT", "FK  deptID     INTEGER", "FK  managerID  INTEGER", "    salary     NUMERIC", "", "7 rows"],
     )
 
-    ax, ay = left_x + left_w, y + 72
-    bx, by = right_x, y + 72
+    ax, ay = left_x + left_w, y + 78
+    bx, by = right_x, y + 78
     d.add(Line(ax, ay, bx, by, strokeColor=ACCENT, strokeWidth=1.5))
-    # arrowhead
     d.add(Line(bx, by, bx - 8, by + 4, strokeColor=ACCENT, strokeWidth=1.5))
     d.add(Line(bx, by, bx - 8, by - 4, strokeColor=ACCENT, strokeWidth=1.5))
     _label(d, (ax + bx) / 2, ay + 10, "deptID", size=7.5, bold=True, color=ACCENT)
+
+    loop_x = right_x + right_w * 0.5
+    loop_y = y + 28
+    d.add(Circle(loop_x, loop_y, 14, fillColor=LIGHT, strokeColor=ACCENT, strokeWidth=1))
+    _label(d, loop_x, loop_y - 3, "mgr", size=6, bold=True, color=ACCENT)
+    _label(d, loop_x, loop_y - 22, "managerID → empID (self)", size=6.5, color=GREY)
 
     _label(d, width / 2, 8, "Figure 1 — Schema: employees.deptID references departments.deptID",
            size=7.5, color=GREY)
@@ -453,25 +458,51 @@ def data_mapping_diagram(width: float) -> Drawing:
     return d
 
 
-def join_result_snapshot(width: float) -> Drawing:
-    """Mini result grids coloured by join outcome."""
-    d = Drawing(width, 175)
-    joins = [
-        ("INNER / NATURAL", "6 rows", MATCH_FILL, "Only matched pairs"),
-        ("LEFT OUTER", "7 rows", LEFT_ONLY, "+ Neha (NULL dept)"),
-        ("RIGHT OUTER", "7 rows", RIGHT_ONLY, "+ Humanities (NULL emp)"),
-    ]
-    card_w = (width - 24) / 3
-    for i, (name, count, fill, note) in enumerate(joins):
-        x = 8 + i * (card_w + 4)
-        d.add(Rect(x, 30, card_w, 120, fillColor=WHITE, strokeColor=NAVY, strokeWidth=1))
-        d.add(Rect(x, 130, card_w, 20, fillColor=NAVY, strokeColor=NAVY, strokeWidth=0))
-        _label(d, x + card_w / 2, 137, name, size=7, bold=True, color=WHITE)
-        d.add(Rect(x + 10, 78, card_w - 20, 42, fillColor=fill, strokeColor=ACCENT, strokeWidth=0.8, fillOpacity=0.7))
-        _label(d, x + card_w / 2, 96, count, size=16, bold=True, color=NAVY)
-        _label(d, x + card_w / 2, 52, note, size=6.5, color=GREY)
+def self_join_diagram(width: float) -> Drawing:
+    """employees joined to itself on managerID."""
+    d = Drawing(width, 130)
+    box_w = width * 0.38
+    left_x = width * 0.08
+    right_x = width * 0.54
+    y = 28
 
-    _label(d, width / 2, 12, "Figure 4 — Result set sizes from this lab dataset",
+    _table_box(d, left_x, y, box_w, 72, "employees e",
+               ["empID", "empName", "managerID"], header_color=ACCENT)
+    _table_box(d, right_x, y, box_w, 72, "employees m",
+               ["empID", "empName", "managerID"], header_color=NAVY)
+
+    ax, ay = left_x + box_w, y + 36
+    bx, by = right_x, y + 36
+    d.add(Line(ax, ay, bx, by, strokeColor=ACCENT, strokeWidth=1.5))
+    d.add(Line(bx, by, bx - 8, by + 4, strokeColor=ACCENT, strokeWidth=1.5))
+    d.add(Line(bx, by, bx - 8, by - 4, strokeColor=ACCENT, strokeWidth=1.5))
+    _label(d, (ax + bx) / 2, ay + 10, "e.managerID = m.empID", size=7, bold=True, color=ACCENT)
+    _label(d, width / 2, 8, "Figure 5 — SELF JOIN: same table, two aliases",
+           size=7.5, color=GREY)
+    return d
+
+
+def join_result_snapshot(width: float) -> Drawing:
+    """Mini result cards coloured by join outcome."""
+    d = Drawing(width, 200)
+    joins = [
+        ("CROSS JOIN", "42", ORPHAN, "6 depts × 7 emps"),
+        ("INNER / NATURAL", "6", MATCH_FILL, "Matched deptID only"),
+        ("LEFT OUTER", "7", LEFT_ONLY, "+ Neha (NULL dept)"),
+        ("RIGHT OUTER", "7", RIGHT_ONLY, "+ Humanities"),
+        ("SELF JOIN", "7", MATCH_FILL, "Employee → manager"),
+    ]
+    card_w = (width - 32) / 5
+    for i, (name, count, fill, note) in enumerate(joins):
+        x = 8 + i * (card_w + 2)
+        d.add(Rect(x, 40, card_w, 130, fillColor=WHITE, strokeColor=NAVY, strokeWidth=1))
+        d.add(Rect(x, 150, card_w, 20, fillColor=NAVY, strokeColor=NAVY, strokeWidth=0))
+        _label(d, x + card_w / 2, 157, name, size=6, bold=True, color=WHITE)
+        d.add(Rect(x + 8, 88, card_w - 16, 38, fillColor=fill, strokeColor=ACCENT, strokeWidth=0.8, fillOpacity=0.7))
+        _label(d, x + card_w / 2, 104, count, size=14, bold=True, color=NAVY)
+        _label(d, x + card_w / 2, 62, note, size=5.5, color=GREY)
+
+    _label(d, width / 2, 12, "Figure 6 — Result set sizes from this lab dataset",
            size=7.5, color=GREY)
     return d
 
@@ -539,43 +570,54 @@ def build() -> None:
     st = []
     cover(
         st, "3",
-        "SQL Joins — NATURAL, INNER, and OUTER",
-        "NATURAL JOIN, INNER JOIN, LEFT OUTER JOIN, RIGHT OUTER JOIN",
-        "departments (6 rows) + employees (7 rows) linked by deptID",
+        "SQL Joins — CROSS, NATURAL, INNER, OUTER & SELF",
+        "CROSS JOIN, NATURAL JOIN, INNER JOIN, LEFT/RIGHT OUTER JOIN, SELF JOIN",
+        "departments (6) + employees (7) · deptID + managerID",
         LAB_DATE,
     )
 
     st.append(heading("1. Aim"))
     st.append(para(
-        "To combine rows from two related tables — "
-        "<font face='Courier'>departments</font> and "
-        "<font face='Courier'>employees</font> — using "
+        "To combine rows from related tables using "
+        "<font face='Courier'>CROSS JOIN</font>, "
         "<font face='Courier'>NATURAL JOIN</font>, "
         "<font face='Courier'>INNER JOIN</font>, "
-        "<font face='Courier'>LEFT OUTER JOIN</font>, and "
-        "<font face='Courier'>RIGHT OUTER JOIN</font>, and to observe how "
-        "each join type handles unmatched rows."
+        "<font face='Courier'>LEFT OUTER JOIN</font>, "
+        "<font face='Courier'>RIGHT OUTER JOIN</font>, and "
+        "<font face='Courier'>SELF JOIN</font>; to compare how each join "
+        "type treats unmatched rows; and to understand when to use each one."
     ))
 
     st.append(heading("2. Theory"))
-    st.append(sub("2.1 NATURAL JOIN"))
+    st.append(sub("2.1 CROSS JOIN"))
+    st.append(para(
+        "A <font face='Courier'>CROSS JOIN</font> returns the Cartesian product "
+        "of two tables: every row from the first table is paired with every row "
+        "from the second. There is no join condition. With 6 departments and "
+        "7 employees the result has 6 × 7 = <b>42 rows</b>. Cross joins are "
+        "rare in everyday queries but useful for generating combinations "
+        "(e.g. all size–colour pairs) or as a building block for other joins."
+    ))
+    st.append(sub("2.2 NATURAL JOIN"))
     st.append(para(
         "A <font face='Courier'>NATURAL JOIN</font> automatically matches rows "
         "on every column that appears in both tables with the same name. Here, "
-        "both tables share <font face='Courier'>deptID</font>, so the join "
-        "condition is implicit. Only rows with a matching "
-        "<font face='Courier'>deptID</font> in both tables are returned."
+        "both tables share <font face='Courier'>deptID</font>, so the condition "
+        "is implicit. Only rows with a matching <font face='Courier'>deptID</font> "
+        "in both tables are returned — the same six rows as "
+        "<font face='Courier'>INNER JOIN</font> when "
+        "<font face='Courier'>deptID</font> is the sole common column. "
+        "(SQL Server does not support <font face='Courier'>NATURAL JOIN</font>; "
+        "use an explicit <font face='Courier'>INNER JOIN</font> instead.)"
     ))
-    st.append(sub("2.2 INNER JOIN"))
+    st.append(sub("2.3 INNER JOIN"))
     st.append(para(
-        "An <font face='Courier'>INNER JOIN</font> returns only the rows where "
-        "the join condition is satisfied. "
-        "<font face='Courier'>INNER JOIN departments ON employees.deptID = "
-        "departments.deptID</font> produces the same result as "
-        "<font face='Courier'>NATURAL JOIN</font> when "
-        "<font face='Courier'>deptID</font> is the sole common column."
+        "An <font face='Courier'>INNER JOIN</font> returns only rows where the "
+        "explicit join condition is satisfied. Unmatched rows from either table "
+        "are discarded. It is the most common join: use it when you only want "
+        "records that have a partner on both sides."
     ))
-    st.append(sub("2.3 LEFT OUTER JOIN"))
+    st.append(sub("2.4 LEFT OUTER JOIN"))
     st.append(para(
         "A <font face='Courier'>LEFT OUTER JOIN</font> keeps every row from the "
         "left table. If no match exists in the right table, the right-hand "
@@ -583,22 +625,63 @@ def build() -> None:
         "<font face='Courier'>Neha Gupta</font> (deptID 99) has no matching "
         "department and therefore appears with a null department name."
     ))
-    st.append(sub("2.4 RIGHT OUTER JOIN"))
+    st.append(sub("2.5 RIGHT OUTER JOIN"))
     st.append(para(
         "A <font face='Courier'>RIGHT OUTER JOIN</font> keeps every row from the "
         "right table. Unmatched left-hand columns become "
         "<font face='Courier'>NULL</font>. "
         "<font face='Courier'>School of Humanities</font> (deptID 6) has no "
-        "employees and therefore appears with null employee fields."
+        "employees and therefore appears with null employee fields. A "
+        "<font face='Courier'>RIGHT JOIN</font> can always be rewritten as a "
+        "<font face='Courier'>LEFT JOIN</font> by swapping the table order."
+    ))
+    st.append(sub("2.6 SELF JOIN"))
+    st.append(para(
+        "A <font face='Courier'>SELF JOIN</font> joins a table to itself using "
+        "two different aliases. It is not a separate SQL keyword — it is an "
+        "<font face='Courier'>INNER</font> or <font face='Courier'>LEFT JOIN</font> "
+        "where both sides are the same table. Here, "
+        "<font face='Courier'>employees e</font> is joined to "
+        "<font face='Courier'>employees m</font> on "
+        "<font face='Courier'>e.managerID = m.empID</font> to list each "
+        "employee alongside their manager's name."
+    ))
+    st.append(sub("2.7 Differences between all join types"))
+    st.append(table(
+        [
+            ["Join type", "Join condition?", "Unmatched rows", "Typical use"],
+            ["CROSS JOIN", "None (Cartesian product)", "N/A — all combinations", "Generate all pairs"],
+            ["NATURAL JOIN", "Implicit (same column names)", "Dropped from both sides", "Quick join on shared key"],
+            ["INNER JOIN", "Explicit ON clause", "Dropped from both sides", "Only matching records"],
+            ["LEFT OUTER JOIN", "Explicit ON clause", "Left kept; right NULL", "Keep all from left table"],
+            ["RIGHT OUTER JOIN", "Explicit ON clause", "Right kept; left NULL", "Keep all from right table"],
+            ["SELF JOIN", "Explicit ON (same table)", "Depends on INNER/LEFT used", "Hierarchies, comparisons"],
+        ],
+        col_widths=[CONTENT_W * 0.18, CONTENT_W * 0.22, CONTENT_W * 0.28, CONTENT_W * 0.22],
+        pad=3,
+    ))
+    st.append(Spacer(1, 0.25 * cm))
+    st.append(para(
+        "<b>Key distinctions:</b> "
+        "<font face='Courier'>CROSS JOIN</font> multiplies rows with no filter. "
+        "<font face='Courier'>INNER</font> and <font face='Courier'>NATURAL</font> "
+        "return only matches. "
+        "<font face='Courier'>LEFT</font> and <font face='Courier'>RIGHT OUTER</font> "
+        "preserve one side's orphans. "
+        "<font face='Courier'>SELF JOIN</font> is a technique (same table, two "
+        "aliases), not a separate result category — it uses inner or outer join "
+        "semantics on a single table."
     ))
     st.extend(figure(join_venn_overview(CONTENT_W)))
 
     st.append(heading("3. Schema"))
     st.append(para(
-        "Two tables share the column <font face='Courier'>deptID</font>. "
-        "The diagram below shows how they relate before any join is applied."
+        "Two tables are linked by <font face='Courier'>deptID</font>. "
+        "<font face='Courier'>employees</font> also references itself through "
+        "<font face='Courier'>managerID</font> for the self join."
     ))
     st.extend(figure(schema_er_diagram(CONTENT_W)))
+    st.extend(figure(self_join_diagram(CONTENT_W)))
     st.append(table(
         [
             ["Table", "Attribute", "Type", "Role"],
@@ -606,20 +689,23 @@ def build() -> None:
             ["departments", "deptName", "TEXT / VARCHAR", "School name"],
             ["employees", "empID", "INTEGER / INT", "Primary key"],
             ["employees", "empName", "TEXT / VARCHAR", "Employee name"],
-            ["employees", "deptID", "INTEGER / INT", "Join key → departments"],
+            ["employees", "deptID", "INTEGER / INT", "FK → departments"],
+            ["employees", "managerID", "INTEGER / INT", "FK → employees (self)"],
             ["employees", "salary", "NUMERIC(10,2)", "Monthly salary"],
         ],
-        col_widths=[CONTENT_W * 0.18, CONTENT_W * 0.22, CONTENT_W * 0.22, CONTENT_W * 0.28],
+        col_widths=[CONTENT_W * 0.16, CONTENT_W * 0.2, CONTENT_W * 0.2, CONTENT_W * 0.34],
         pad=4,
     ))
 
     st.append(heading("4. Procedure"))
-    st.append(para("1. Create <font face='Courier'>departments</font> and <font face='Courier'>employees</font> with a shared <font face='Courier'>deptID</font> column."))
+    st.append(para("1. Create <font face='Courier'>departments</font> and <font face='Courier'>employees</font> (with <font face='Courier'>managerID</font> for self join)."))
     st.append(para("2. Insert six departments and seven employees, including deliberate mismatches for outer joins."))
     st.append(para("3. Display both base tables."))
-    st.append(para("4. Run <font face='Courier'>NATURAL JOIN</font> and <font face='Courier'>INNER JOIN</font> — expect six matched rows."))
-    st.append(para("5. Run <font face='Courier'>LEFT OUTER JOIN</font> — expect seven rows (one employee without a department)."))
-    st.append(para("6. Run <font face='Courier'>RIGHT OUTER JOIN</font> — expect seven rows (one department without employees)."))
+    st.append(para("4. Run <font face='Courier'>CROSS JOIN</font> — expect 42 rows (count shown; sample limited to 8)."))
+    st.append(para("5. Run <font face='Courier'>NATURAL JOIN</font> and <font face='Courier'>INNER JOIN</font> — expect six matched rows."))
+    st.append(para("6. Run <font face='Courier'>LEFT OUTER JOIN</font> — expect seven rows (one employee without a department)."))
+    st.append(para("7. Run <font face='Courier'>RIGHT OUTER JOIN</font> — expect seven rows (one department without employees)."))
+    st.append(para("8. Run <font face='Courier'>SELF JOIN</font> — expect seven rows listing each employee and their manager."))
     st.extend(figure(data_mapping_diagram(CONTENT_W)))
 
     st.append(heading("5. Source Code"))
@@ -637,35 +723,40 @@ def build() -> None:
     st.append(table(
         [
             ["Join type", "Rows returned", "Unmatched handling"],
+            ["CROSS JOIN", "42", "No condition — every dept × every employee"],
             ["NATURAL JOIN", "6", "Drops non-matching rows from both sides"],
             ["INNER JOIN", "6", "Same as NATURAL JOIN here"],
             ["LEFT OUTER JOIN", "7", "Keeps Neha Gupta (deptID 99); deptName is NULL"],
             ["RIGHT OUTER JOIN", "7", "Keeps Humanities (deptID 6); employee cols are NULL"],
+            ["SELF JOIN", "7", "All employees; Ananya has NULL manager (top of chain)"],
         ],
-        col_widths=[CONTENT_W * 0.24, CONTENT_W * 0.18, CONTENT_W * 0.48],
+        col_widths=[CONTENT_W * 0.22, CONTENT_W * 0.14, CONTENT_W * 0.54],
     ))
     st.append(Spacer(1, 0.35 * cm))
     st.append(para(
+        "<font face='Courier'>CROSS JOIN</font> produces the largest result because "
+        "it ignores relationships entirely. "
         "<font face='Courier'>INNER JOIN</font> and "
         "<font face='Courier'>NATURAL JOIN</font> return only the six employees "
         "whose <font face='Courier'>deptID</font> exists in "
-        "<font face='Courier'>departments</font>. "
-        "<font face='Courier'>LEFT OUTER JOIN</font> adds the orphan employee; "
-        "<font face='Courier'>RIGHT OUTER JOIN</font> adds the department with "
-        "no staff. Together they illustrate how outer joins preserve rows that "
-        "inner joins would discard."
+        "<font face='Courier'>departments</font>. Outer joins add the orphan "
+        "employee (left) or orphan department (right). "
+        "<font face='Courier'>SELF JOIN</font> does not change row count here "
+        "because a <font face='Courier'>LEFT JOIN</font> keeps every employee "
+        "and simply leaves the manager column null for Ananya Sharma, who has "
+        "no manager."
     ))
 
     st.append(heading("8. Conclusion"))
     st.append(para(
-        "Joins combine related tables on a common key. "
-        "<font face='Courier'>INNER JOIN</font> and "
-        "<font face='Courier'>NATURAL JOIN</font> return only matching pairs. "
-        "Outer joins extend one side: "
-        "<font face='Courier'>LEFT OUTER JOIN</font> keeps all employees, "
-        "<font face='Courier'>RIGHT OUTER JOIN</font> keeps all departments. "
-        "Choosing the correct join depends on whether unmatched rows from the "
-        "left, right, or neither side must appear in the result."
+        "SQL joins answer different questions about related data. "
+        "<font face='Courier'>CROSS JOIN</font> asks &ldquo;every combination?&rdquo; "
+        "<font face='Courier'>INNER JOIN</font> asks &ldquo;only matches?&rdquo; "
+        "Outer joins ask &ldquo;keep everyone from this side even without a match?&rdquo; "
+        "<font face='Courier'>SELF JOIN</font> asks &ldquo;how do rows in this "
+        "table relate to other rows in the same table?&rdquo; Choosing the right "
+        "join depends on whether you need all combinations, only matches, or "
+        "orphan rows from a specific side."
     ))
 
     write_report(

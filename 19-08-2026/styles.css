@@ -1026,3 +1026,24 @@ li.CodeMirror-hint-active { background: var(--blue); color: white; }
   }
   .btn:active, .icon-btn:active, .dept-card:hover { transform: none; }
 }
+
+/* Embed mode — loaded inside DBMS Lab Hub iframe */
+body.embed-mode {
+  background: var(--paper);
+  overscroll-behavior: none;
+}
+body.embed-mode .app.app-embed {
+  max-width: none;
+  padding: var(--sp-3) var(--sp-3) var(--sp-4);
+  min-height: auto;
+  gap: var(--sp-3);
+}
+body.embed-mode .tabbar {
+  align-self: stretch;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+body.embed-mode .content {
+  min-height: 0;
+}

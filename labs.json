@@ -5,12 +5,13 @@
     "date": "02 Sep 2026",
     "experiment": "3",
     "title": "SQL Joins",
-    "subtitle": "NATURAL, INNER, LEFT & RIGHT OUTER JOIN",
-    "topic": "Combine rows from departments and employees using four join types.",
+    "subtitle": "CROSS, NATURAL, INNER, OUTER & SELF JOIN",
+    "topic": "Combine rows using cross, natural, inner, outer, and self joins with a comparison of all types.",
+    "type": "sql",
     "sqlFile": "joins.sql",
     "report": "DBMS_Lab_Joins_Report.pdf",
     "color": "#2E75B6",
-    "legacyApp": null
+    "defaultTab": "report"
   },
   {
     "id": "26-08-2026",
@@ -20,10 +21,11 @@
     "title": "CREATE & ALTER TABLE",
     "subtitle": "Rename column department → faculty",
     "topic": "Create an employees table, seed data, then rename a column with ALTER TABLE.",
+    "type": "sql",
     "sqlFile": "employees.sql",
     "report": "DBMS_Lab_Employees_Report.pdf",
     "color": "#FF9600",
-    "legacyApp": null
+    "defaultTab": "report"
   },
   {
     "id": "19-08-2026",
@@ -32,11 +34,15 @@
     "experiment": "1",
     "title": "Employee Directory",
     "subtitle": "Schema design, CRUD & views",
-    "topic": "Full interactive employee directory with departments, editable grid, and SQL compiler.",
-    "sqlFile": null,
-    "sqlSetup": ["schema.sql", "seed.sql"],
-    "report": null,
+    "topic": "Interactive employee directory with departments, editable grid, and SQL compiler.",
+    "type": "directory",
     "color": "#58CC02",
-    "legacyApp": "19-08-2026/index.html"
+    "defaultTab": "departments",
+    "directoryTabs": [
+      { "id": "departments", "label": "Departments" },
+      { "id": "data", "label": "Data" },
+      { "id": "schema", "label": "Schema" },
+      { "id": "compiler", "label": "SQL Compiler" }
+    ]
   }
 ]

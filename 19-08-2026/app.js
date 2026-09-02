@@ -217,9 +217,21 @@ function icon(name) {
    ============================================================ */
 
 async function init() {
+  const params = new URLSearchParams(location.search);
+  const isEmbed = params.get('embed') === '1';
+  const embedTab = params.get('tab');
+
+  if (isEmbed) {
+    document.body.classList.add('embed-mode');
+    document.querySelector('.skip-link')?.remove();
+    document.querySelector('.topbar')?.remove();
+    document.querySelector('.app-footer')?.remove();
+    document.querySelector('.app')?.classList.add('app-embed');
+  }
+
   wireTabs();
-  document.getElementById('resetBtn').addEventListener('click', handleReset);
-  document.getElementById('exportBtn').addEventListener('click', handleExport);
+  document.getElementById('resetBtn')?.addEventListener('click', handleReset);
+  document.getElementById('exportBtn')?.addEventListener('click', handleExport);
 
   try {
     SQLmod = await initSqlJs({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/sql.js@1.14.2/dist/${f}` });
@@ -229,7 +241,10 @@ async function init() {
   }
 
   loadFreshDatabase();
-  switchTab('departments');
+  const startTab = embedTab && ['departments', 'data', 'schema', 'compiler'].includes(embedTab)
+    ? embedTab
+    : 'departments';
+  switchTab(startTab);
 }
 
 function loadFreshDatabase() {
