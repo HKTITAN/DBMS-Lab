@@ -52,7 +52,9 @@ INSERT INTO employees (empID, empName, deptID, managerID, salary) VALUES
 -- ------------------------------------------------------------
 -- 3. Base tables (reference)
 -- ------------------------------------------------------------
+-- List all departments
 SELECT * FROM departments;
+-- List all employees
 SELECT * FROM employees;
 
 -- ------------------------------------------------------------
@@ -60,10 +62,12 @@ SELECT * FROM employees;
 --    Cartesian product: every row of table A paired with every
 --    row of table B. No join condition. Here: 6 × 7 = 42 rows.
 -- ------------------------------------------------------------
+-- Count cross join rows
 SELECT COUNT(*) AS cross_join_row_count
 FROM departments
 CROSS JOIN employees;
 
+-- Cross join sample pairs
 SELECT d.deptName, e.empName
 FROM departments AS d
 CROSS JOIN employees AS e
@@ -75,6 +79,7 @@ LIMIT 8;
 --    Matches on every column with the same name (here: deptID).
 --    Only rows with a matching deptID in BOTH tables appear.
 -- ------------------------------------------------------------
+-- Natural join on deptID
 SELECT empID, empName, deptName, salary
 FROM employees
 NATURAL JOIN departments;
@@ -84,6 +89,7 @@ NATURAL JOIN departments;
 --    Explicit join condition; same result as NATURAL JOIN here
 --    because deptID is the only common column.
 -- ------------------------------------------------------------
+-- Inner join employees and departments
 SELECT e.empID, e.empName, d.deptName, e.salary
 FROM employees AS e
 INNER JOIN departments AS d ON e.deptID = d.deptID;
@@ -93,6 +99,7 @@ INNER JOIN departments AS d ON e.deptID = d.deptID;
 --     All rows from the LEFT table (employees); unmatched dept
 --     columns are NULL (empID 7 → deptID 99 has no department).
 -- ------------------------------------------------------------
+-- Left join — keep all employees
 SELECT e.empID, e.empName, e.deptID, d.deptName, e.salary
 FROM employees AS e
 LEFT OUTER JOIN departments AS d ON e.deptID = d.deptID;
@@ -103,6 +110,7 @@ LEFT OUTER JOIN departments AS d ON e.deptID = d.deptID;
 --     employee columns are NULL (deptID 6 has no employees).
 --     Requires SQLite 3.39+; see joins.sqlserver.sql for T-SQL.
 -- ------------------------------------------------------------
+-- Right join — keep all departments
 SELECT e.empID, e.empName, d.deptID, d.deptName, e.salary
 FROM employees AS e
 RIGHT OUTER JOIN departments AS d ON e.deptID = d.deptID;
@@ -113,6 +121,7 @@ RIGHT OUTER JOIN departments AS d ON e.deptID = d.deptID;
 --     Here: each employee matched to their manager (also in
 --     employees). Ananya has no manager → manager name is NULL.
 -- ------------------------------------------------------------
+-- Self join — employee to manager
 SELECT
     e.empName  AS employee,
     m.empName  AS manager

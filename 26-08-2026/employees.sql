@@ -31,7 +31,10 @@ INSERT INTO employees (empID, empName, department, salary) VALUES
 -- ------------------------------------------------------------
 -- 3. Verify the table BEFORE the rename
 -- ------------------------------------------------------------
+-- Employees before column rename
 SELECT * FROM employees;
+
+-- Table schema before rename
 PRAGMA table_info(employees);
 
 -- ------------------------------------------------------------
@@ -43,5 +46,8 @@ ALTER TABLE employees RENAME COLUMN department TO faculty;
 -- ------------------------------------------------------------
 -- 5. Verify the table AFTER the rename
 -- ------------------------------------------------------------
+-- Employees after column rename
 SELECT * FROM employees;
+
+-- Table schema after rename
 PRAGMA table_info(employees);

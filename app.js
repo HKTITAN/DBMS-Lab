@@ -106,31 +106,101 @@ function stmtKind(stmt) {
   return stmt.trim().split(/\s+/)[0].toUpperCase();
 }
 
+function cleanQueryLabel(text) {
+  return String(text)
+    .replace(/^\d+[a-z]?\.\s*/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findLabelBefore(text, pos) {
+  if (pos < 0) return '';
+
+  const lines = text.slice(0, pos).split('\n');
+  for (let i = lines.length - 1; i >= 0; i -= 1) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (!line.startsWith('--')) return '';
+
+    const content = line.replace(/^--\s*/, '').trim();
+    if (/^[-=]{3,}$/.test(content)) break;
+    if (content.startsWith('•') || content.startsWith('DBMS Lab') || content.startsWith('SQLite')
+      || content.startsWith('Microsoft SQL') || content.startsWith('For the class')) continue;
+
+    if (content.startsWith('@')) return content.slice(1).trim();
+
+    const numbered = content.match(/^\d+[a-z]?\.\s*(.+)$/i);
+    if (numbered) {
+      const title = numbered[1].split(/\s{2,}/)[0].trim();
+      if (title.length >= 3 && title.length <= 60) return cleanQueryLabel(title);
+      continue;
+    }
+
+    if (content.length >= 3 && content.length <= 70) return cleanQueryLabel(content);
+  }
+  return '';
+}
+
+function inferQueryLabel(stmt) {
+  const upper = stmt.replace(/\s+/g, ' ').trim().toUpperCase();
+
+  if (upper.startsWith('PRAGMA TABLE_INFO')) return 'Show table schema';
+  if (upper.includes('INFORMATION_SCHEMA.COLUMNS')) return 'Show column metadata';
+
+  if (upper.includes('CROSS JOIN')) {
+    return upper.includes('COUNT(') ? 'Count cross join rows' : 'Cross join sample pairs';
+  }
+  if (upper.includes('NATURAL JOIN')) return 'Natural join on shared columns';
+  if (upper.includes('INNER JOIN')) return 'Inner join employees and departments';
+  if (upper.includes('RIGHT OUTER JOIN') || upper.includes('RIGHT JOIN')) return 'Right join — all departments';
+  if (upper.includes('LEFT OUTER JOIN') || (upper.includes('LEFT JOIN') && upper.includes('JOIN EMPLOYEES'))) {
+    if (upper.match(/FROM\s+EMPLOYEES[\s\S]*JOIN\s+EMPLOYEES/)) return 'Self join — employee to manager';
+    return 'Left join — all employees';
+  }
+  if (upper.match(/FROM\s+EMPLOYEES[\s\S]*JOIN\s+EMPLOYEES/)) return 'Self join — employee to manager';
+
+  const fromMatch = upper.match(/FROM\s+(\w+)/);
+  if (upper.startsWith('SELECT *') && fromMatch) {
+    const table = fromMatch[1].toLowerCase();
+    return `List all ${table}`;
+  }
+
+  if (upper.startsWith('SELECT')) return 'Run select';
+  return 'Run query';
+}
+
+function uniqueLabel(label, used) {
+  if (!used.has(label)) {
+    used.add(label);
+    return label;
+  }
+  let n = 2;
+  while (used.has(`${label} (${n})`)) n += 1;
+  const unique = `${label} (${n})`;
+  used.add(unique);
+  return unique;
+}
+
 function parseLabSql(text) {
   const statements = splitStatements(text);
   const setup = [];
   const examples = [];
-  const rawLines = text.split('\n');
-  let pendingLabel = '';
+  const usedLabels = new Set();
+  let searchFrom = 0;
 
-  for (const line of rawLines) {
-    const m = line.match(/^\s*--\s*(\d+[a-z]?\.\s*.+)$/i);
-    if (m) pendingLabel = m[1].replace(/^\d+[a-z]?\.\s*/, '').trim();
-    else if (line.trim().startsWith('--') && !line.match(/^\s*--\s*-+/)) {
-      const label = line.replace(/^\s*--\s*/, '').trim();
-      if (label && !label.startsWith('=') && label.length < 80) pendingLabel = label;
-    }
-  }
-
-  let exampleIdx = 0;
   for (const stmt of statements) {
     const kind = stmtKind(stmt);
     if (kind === 'SELECT' || kind === 'PRAGMA') {
-      examples.push({ label: pendingLabel || `Query ${++exampleIdx}`, sql: stmt + ';' });
-      pendingLabel = '';
+      const needle = stmt.trim().split('\n')[0].trim();
+      const pos = text.indexOf(needle, searchFrom);
+      if (pos >= 0) searchFrom = pos + needle.length;
+      const label = uniqueLabel(
+        (pos >= 0 ? findLabelBefore(text, pos) : '') || inferQueryLabel(stmt),
+        usedLabels,
+      );
+      examples.push({ label, sql: stmt + ';' });
     } else {
       setup.push(stmt);
-      if (!['INSERT', 'CREATE', 'DROP', 'ALTER'].includes(kind)) pendingLabel = '';
     }
   }
   return { setup, examples };

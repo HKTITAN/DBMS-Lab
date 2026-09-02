@@ -30,8 +30,10 @@ INSERT INTO employees (empID, empName, department, salary) VALUES
 -- ------------------------------------------------------------
 -- 3. Verify the table BEFORE the rename
 -- ------------------------------------------------------------
+-- Employees before column rename
 SELECT * FROM employees;
 
+-- Table columns before rename
 SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'employees'
@@ -47,8 +49,10 @@ EXEC sp_rename 'employees.department', 'faculty', 'COLUMN';
 -- ------------------------------------------------------------
 -- 5. Verify the table AFTER the rename
 -- ------------------------------------------------------------
+-- Employees after column rename
 SELECT * FROM employees;
 
+-- Table columns after rename
 SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, IS_NULLABLE
 FROM INFORMATION_SCHEMA.COLUMNS
 WHERE TABLE_NAME = 'employees'

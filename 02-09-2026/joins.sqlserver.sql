@@ -48,16 +48,20 @@ INSERT INTO employees (empID, empName, deptID, managerID, salary) VALUES
 -- ------------------------------------------------------------
 -- 3. Base tables (reference)
 -- ------------------------------------------------------------
+-- List all departments
 SELECT * FROM departments;
+-- List all employees
 SELECT * FROM employees;
 
 -- ------------------------------------------------------------
 -- 4. CROSS JOIN
 -- ------------------------------------------------------------
+-- Count cross join rows
 SELECT COUNT(*) AS cross_join_row_count
 FROM departments
 CROSS JOIN employees;
 
+-- Cross join sample pairs
 SELECT TOP 8 d.deptName, e.empName
 FROM departments AS d
 CROSS JOIN employees AS e
@@ -66,6 +70,7 @@ ORDER BY d.deptID, e.empID;
 -- ------------------------------------------------------------
 -- 5. NATURAL JOIN — not supported in SQL Server; equivalent:
 -- ------------------------------------------------------------
+-- Natural join equivalent (inner join on deptID)
 SELECT e.empID, e.empName, d.deptName, e.salary
 FROM employees AS e
 INNER JOIN departments AS d ON e.deptID = d.deptID;
@@ -73,6 +78,7 @@ INNER JOIN departments AS d ON e.deptID = d.deptID;
 -- ------------------------------------------------------------
 -- 6. INNER JOIN
 -- ------------------------------------------------------------
+-- Inner join employees and departments
 SELECT e.empID, e.empName, d.deptName, e.salary
 FROM employees AS e
 INNER JOIN departments AS d ON e.deptID = d.deptID;
@@ -80,6 +86,7 @@ INNER JOIN departments AS d ON e.deptID = d.deptID;
 -- ------------------------------------------------------------
 -- 7a. LEFT OUTER JOIN
 -- ------------------------------------------------------------
+-- Left join — keep all employees
 SELECT e.empID, e.empName, e.deptID, d.deptName, e.salary
 FROM employees AS e
 LEFT OUTER JOIN departments AS d ON e.deptID = d.deptID;
@@ -87,6 +94,7 @@ LEFT OUTER JOIN departments AS d ON e.deptID = d.deptID;
 -- ------------------------------------------------------------
 -- 7b. RIGHT OUTER JOIN
 -- ------------------------------------------------------------
+-- Right join — keep all departments
 SELECT e.empID, e.empName, d.deptID, d.deptName, e.salary
 FROM employees AS e
 RIGHT OUTER JOIN departments AS d ON e.deptID = d.deptID;
@@ -94,6 +102,7 @@ RIGHT OUTER JOIN departments AS d ON e.deptID = d.deptID;
 -- ------------------------------------------------------------
 -- 8. SELF JOIN
 -- ------------------------------------------------------------
+-- Self join — employee to manager
 SELECT
     e.empName  AS employee,
     m.empName  AS manager
