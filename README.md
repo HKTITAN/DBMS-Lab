@@ -4,13 +4,24 @@ SGT University — Database Management Systems laboratory work by **Harshit Khem
 
 ## Web app
 
-Open [`index.html`](index.html) or visit the [GitHub Pages site](https://hktitan.github.io/DBMS-Lab/) to:
+**Live:** [dbms-lab-sem5.vercel.app](https://dbms-lab-sem5.vercel.app) · **Custom domain:** [dbms-lab-sem5.khe.money](https://dbms-lab-sem5.khe.money) (add DNS `A` record → `76.76.21.21`)
+
+Each lab has its own page with in-app tabs — no external redirects:
+
+| Route | Lab |
+|-------|-----|
+| `/lab/02-09-2026/report` | SQL Joins — PDF report |
+| `/lab/02-09-2026/sql` | SQL Joins — playground |
+| `/lab/26-08-2026/report` | CREATE & ALTER TABLE — PDF |
+| `/lab/19-08-2026/departments` | Employee directory (embedded) |
+
+Open [`index.html`](index.html) locally or run a static server to develop:
 
 - Browse all lab sessions in one place
 - View experiment reports as PDFs
-- Run each lab's SQL in a real in-browser SQLite engine ([sql.js](https://sql.js.org/))
+- Run each lab's SQL in a real in-browser SQLite engine (sql.js)
 
-> **Note:** The hub needs to be served over HTTP (GitHub Pages, VS Code Live Server, or `python -m http.server`). Opening `index.html` directly from the filesystem won't load SQL files.
+> **Note:** The hub needs to be served over HTTP (Vercel, VS Code Live Server, or `python -m http.server`). Opening `index.html` directly from the filesystem won't load SQL files.
 
 ### Local server
 
@@ -23,7 +34,7 @@ python -m http.server 8080
 
 | Date | Topic | Files |
 |------|-------|-------|
-| [19-08-2026](19-08-2026/) | Employee directory — schema, CRUD, views | Full interactive app |
+| [19-08-2026](19-08-2026/) | Employee directory — schema, CRUD, views | Embedded in hub (`/lab/19-08-2026/…`) |
 | [26-08-2026](26-08-2026/) | CREATE TABLE & ALTER TABLE (rename column) | `employees.sql`, PDF report |
 | [02-09-2026](02-09-2026/) | SQL Joins (CROSS, NATURAL, INNER, OUTER, SELF) | `joins.sql`, PDF report |
 
