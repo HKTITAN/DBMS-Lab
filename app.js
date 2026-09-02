@@ -36,6 +36,13 @@ function quoteIdent(id) {
   return '"' + String(id).replace(/"/g, '""') + '"';
 }
 
+/** Always resolve static assets from site root (not from /lab/:id/...). */
+function assetUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+  const clean = String(path).replace(/^\/+/, '');
+  return `/${clean}`;
+}
+
 /* ── Routing ─────────────────────────────────────────────── */
 
 function parseRoute() {
@@ -165,8 +172,9 @@ function refreshHintTables() {
 }
 
 async function fetchText(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error(`Could not load ${path} (${res.status})`);
+  const url = assetUrl(path);
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
   return res.text();
 }
 
@@ -231,7 +239,12 @@ function renderHome() {
   main.innerHTML = `
     <section class="hero">
       <h1 class="page-title">Lab Sessions</h1>
-      <p class="hero-sub">Each experiment has its own page — open reports, run SQL, and explore schemas without leaving this site.</p>
+      <p class="hero-sub">Pick an experiment — read the report, run SQL, and explore schemas. Everything stays in this app.</p>
+      <div class="home-stats" aria-label="Course overview">
+        <span class="stat-pill"><strong>${labs.length}</strong> labs</span>
+        <span class="stat-pill">SQLite in-browser</span>
+        <span class="stat-pill">Semester 5</span>
+      </div>
     </section>
     <div class="lab-grid" id="labGrid"></div>
   `;
@@ -247,14 +260,19 @@ function buildLabCard(lab) {
   link.className = 'lab-card';
   link.href = href;
   link.style.setProperty('--lab-color', lab.color);
+  const monogram = lab.experiment || lab.id.slice(0, 2);
   link.innerHTML = `
-    <div class="lab-card-accent"></div>
+    <div class="lab-card-top">
+      <span class="lab-monogram" aria-hidden="true">${escapeHtml(monogram)}</span>
+      <div class="lab-card-head">
+        <span class="lab-date">Exp ${escapeHtml(lab.experiment)} · ${escapeHtml(lab.date)}</span>
+        <h2 class="lab-card-title">${escapeHtml(lab.title)}</h2>
+      </div>
+    </div>
     <div class="lab-card-body">
-      <span class="lab-date">Exp ${escapeHtml(lab.experiment)} · ${escapeHtml(lab.date)}</span>
-      <h2 class="lab-card-title">${escapeHtml(lab.title)}</h2>
       <p class="lab-sub">${escapeHtml(lab.subtitle)}</p>
       <p class="lab-topic">${escapeHtml(lab.topic)}</p>
-      <span class="lab-card-cta">Open lab →</span>
+      <span class="lab-card-cta">${icon('play')} Open lab</span>
     </div>
   `;
   return link;
@@ -276,6 +294,11 @@ async function renderLab(id, tab) {
 
   if (!tab || tab !== activeTab) {
     history.replaceState(null, '', labHref(id, activeTab));
+  }
+
+  if (editorCM) {
+    editorCM.getWrapperElement()?.remove();
+    editorCM = null;
   }
 
   currentLab = lab;
@@ -301,6 +324,11 @@ async function renderLab(id, tab) {
     return;
   }
 
+  if (activeTab === 'report') {
+    renderReportPanel();
+    return;
+  }
+
   try {
     await loadLabAssets(lab);
     runSetup(labSetup);
@@ -310,14 +338,13 @@ async function renderLab(id, tab) {
     return;
   }
 
-  if (activeTab === 'report') renderReportPanel();
-  else if (activeTab === 'sql') renderSqlPanel();
+  if (activeTab === 'sql') renderSqlPanel();
   else renderSchemaPanel();
 }
 
 function renderDirectoryPanel(tab) {
   const panel = document.getElementById('labPanel');
-  const src = `/${currentLab.folder}/index.html?embed=1&tab=${encodeURIComponent(tab)}`;
+  const src = assetUrl(`${currentLab.folder}/index.html?embed=1&tab=${encodeURIComponent(tab)}`);
   panel.innerHTML = `
     <div class="embed-wrap">
       <iframe class="embed-frame" src="${src}" title="${escapeHtml(currentLab.title)} — ${escapeHtml(tab)}" loading="lazy"></iframe>
@@ -327,7 +354,7 @@ function renderDirectoryPanel(tab) {
 
 function renderReportPanel() {
   const panel = document.getElementById('labPanel');
-  const pdfUrl = `/${currentLab.folder}/${currentLab.report}`;
+  const pdfUrl = assetUrl(`${currentLab.folder}/${currentLab.report}`);
   panel.innerHTML = `
     <div class="panel-head">
       <div><h2 class="panel-title">Lab Report</h2><p class="sub">${escapeHtml(currentLab.report)}</p></div>
@@ -516,7 +543,22 @@ async function init() {
 
   document.getElementById('loadingShell')?.remove();
   window.addEventListener('popstate', render);
+  document.addEventListener('click', onDocumentClick);
   await render();
+}
+
+function onDocumentClick(event) {
+  if (event.defaultPrevented || event.button !== 0) return;
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const anchor = event.target.closest('a[href]');
+  if (!anchor || anchor.target === '_blank' || anchor.hasAttribute('download')) return;
+  const url = new URL(anchor.href, location.origin);
+  if (url.origin !== location.origin) return;
+  const path = url.pathname.replace(/\/$/, '') || '/';
+  if (path === location.pathname.replace(/\/$/, '') && url.search === location.search) return;
+  event.preventDefault();
+  history.pushState(null, '', path + url.search + url.hash);
+  render();
 }
 
 document.addEventListener('DOMContentLoaded', init);

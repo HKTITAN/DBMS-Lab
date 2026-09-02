@@ -226,6 +226,7 @@ async function init() {
     document.querySelector('.skip-link')?.remove();
     document.querySelector('.topbar')?.remove();
     document.querySelector('.app-footer')?.remove();
+    document.querySelector('.tabbar')?.remove();
     document.querySelector('.app')?.classList.add('app-embed');
   }
 

@@ -292,230 +292,210 @@ def _label(d: Drawing, x: float, y: float, text: str, size: float = 8,
 
 
 def _table_box(d: Drawing, x: float, y: float, w: float, h: float,
-               title: str, rows: list[str], header_color=NAVY) -> None:
+               title: str, rows: list[str], header_color=NAVY,
+               highlight_rows: set[int] | None = None,
+               highlight_fill=ORPHAN) -> None:
+    highlight_rows = highlight_rows or set()
     d.add(Rect(x, y, w, h, fillColor=WHITE, strokeColor=NAVY, strokeWidth=1.2))
     d.add(Rect(x, y + h - 18, w, 18, fillColor=header_color, strokeColor=NAVY, strokeWidth=0))
     _label(d, x + w / 2, y + h - 13, title, size=9, bold=True, color=WHITE)
     row_h = (h - 22) / max(len(rows), 1)
     for i, row in enumerate(rows):
         ry = y + h - 22 - (i + 0.65) * row_h
+        if i in highlight_rows:
+            d.add(Rect(x + 2, ry - row_h * 0.35, w - 4, row_h * 0.9,
+                       fillColor=highlight_fill, fillOpacity=0.55,
+                       strokeColor=colors.HexColor("#C0392B"), strokeWidth=0.6,
+                       strokeDashArray=[2, 2]))
         _label(d, x + 6, ry, row, size=7, color=colors.HexColor("#1A1A1A"), anchor="start")
 
 
+def _venn_pair(d: Drawing, cx: float, cy: float, r: float, mode: str) -> None:
+    """Two overlapping circles; mode = inner | left | right | natural."""
+    lx, rx = cx - r * 0.62, cx + r * 0.62
+    d.add(Circle(lx, cy, r, fillColor=LEFT_ONLY, strokeColor=NAVY,
+                 strokeWidth=1, fillOpacity=0.5))
+    d.add(Circle(rx, cy, r, fillColor=RIGHT_ONLY, strokeColor=NAVY,
+                 strokeWidth=1, fillOpacity=0.5))
+    overlap = Circle(cx, cy, r * 0.4, fillColor=MATCH_FILL, strokeColor=ACCENT,
+                     strokeWidth=1.2, fillOpacity=0.92)
+    if mode in ("inner", "natural"):
+        d.add(overlap)
+    elif mode == "left":
+        d.add(Circle(lx, cy, r, fillColor=LEFT_ONLY, strokeColor=NAVY,
+                     strokeWidth=1.2, fillOpacity=0.72))
+        d.add(overlap)
+    elif mode == "right":
+        d.add(Circle(rx, cy, r, fillColor=RIGHT_ONLY, strokeColor=NAVY,
+                     strokeWidth=1.2, fillOpacity=0.72))
+        d.add(overlap)
+    _label(d, lx, cy + r + 14, "emps", size=6.5, color=NAVY)
+    _label(d, rx, cy + r + 14, "depts", size=6.5, color=NAVY)
+
+
+def _legend_chip(d: Drawing, x: float, y: float, fill, label: str) -> None:
+    d.add(Rect(x, y, 11, 11, fillColor=fill, strokeColor=NAVY, strokeWidth=0.6))
+    _label(d, x + 15, y + 2, label, size=6.5, color=GREY, anchor="start")
+
+
+def cross_join_diagram(width: float) -> Drawing:
+    """Cartesian product: every employee row paired with every department row."""
+    d = Drawing(width, 148)
+    left_x, mid_x = 10, width * 0.42
+    box_w = width * 0.28
+    top_y = 118
+    row_h = 20
+
+    _table_box(d, left_x, top_y - 4 * row_h - 4, box_w, 4 * row_h + 22, "departments",
+               ["1  Eng & Tech", "2  Management", "3  Law", "… 6 rows total"])
+    _table_box(d, mid_x, top_y - 2 * row_h - 4, box_w, 2 * row_h + 22, "employees",
+               ["1  Ananya", "2  Rohan", "… 7 rows total"])
+
+    grid_x = width * 0.72
+    cell = 22
+    pairs = [("1·1", "1·2"), ("2·1", "2·2"), ("3·1", "3·2")]
+    for ri, row in enumerate(pairs):
+        for ci, cell_label in enumerate(row):
+            gx = grid_x + ci * (cell + 4)
+            gy = 88 - ri * (cell + 6)
+            d.add(Rect(gx, gy, cell, cell, fillColor=LIGHT, strokeColor=ACCENT, strokeWidth=0.8))
+            _label(d, gx + cell / 2, gy + cell / 2 - 3, cell_label, size=6, color=NAVY)
+
+    _label(d, grid_x + cell + 2, 28, "×", size=16, bold=True, color=ACCENT)
+    _label(d, grid_x + cell + 2, 12, "6 × 7 = 42 rows", size=8, bold=True, color=NAVY)
+    d.add(Line(left_x + box_w + 4, 70, grid_x - 6, 70, strokeColor=GREY, strokeWidth=0.8,
+               strokeDashArray=[3, 3]))
+    _label(d, (left_x + box_w + grid_x) / 2, 76, "no join condition", size=7, color=GREY)
+    return d
+
+
+def natural_join_diagram(width: float) -> Drawing:
+    d = Drawing(width, 128)
+    _venn_pair(d, width * 0.32, 68, 32, "natural")
+    note_x = width * 0.58
+    _label(d, note_x, 98, "Implicit match on", size=7.5, color=NAVY, anchor="start")
+    _label(d, note_x, 84, "shared column deptID", size=7.5, bold=True, color=ACCENT, anchor="start")
+    _label(d, note_x, 66, "6 matched rows returned", size=7, color=GREY, anchor="start")
+    _label(d, note_x, 52, "Neha (dept 99) dropped", size=7, color=GREY, anchor="start")
+    _label(d, note_x, 38, "Humanities dropped", size=7, color=GREY, anchor="start")
+    _legend_chip(d, note_x, 18, MATCH_FILL, "Matched rows")
+    _legend_chip(d, note_x + 90, 18, ORPHAN, "Dropped orphans")
+    return d
+
+
+def inner_join_diagram(width: float) -> Drawing:
+    d = Drawing(width, 128)
+    _venn_pair(d, width * 0.32, 68, 32, "inner")
+    note_x = width * 0.58
+    _label(d, note_x, 98, "Explicit ON clause:", size=7.5, color=NAVY, anchor="start")
+    _label(d, note_x, 84, "e.deptID = d.deptID", size=7, bold=True, color=ACCENT, anchor="start")
+    _label(d, note_x, 66, "Only overlapping rows", size=7, color=GREY, anchor="start")
+    _label(d, note_x, 52, "returned (6 rows)", size=7, color=GREY, anchor="start")
+    _legend_chip(d, note_x, 18, MATCH_FILL, "Matched rows only")
+    return d
+
+
+def left_outer_join_diagram(width: float) -> Drawing:
+    d = Drawing(width, 142)
+    box_w = width * 0.44
+    _table_box(
+        d, 10, 24, box_w, 100, "employees (left table)",
+        ["Ananya   dept=1", "Rohan    dept=2", "Priya    dept=3", "Neha     dept=99  ← no match"],
+        highlight_rows={3}, highlight_fill=ORPHAN,
+    )
+    _venn_pair(d, width * 0.76, 74, 28, "left")
+    _label(d, width / 2, 8, "All left rows kept — right columns NULL when unmatched",
+           size=6.5, color=colors.HexColor("#C0392B"))
+    return d
+
+
+def right_outer_join_diagram(width: float) -> Drawing:
+    d = Drawing(width, 142)
+    box_w = width * 0.44
+    _table_box(
+        d, 10, 24, box_w, 100, "departments (right table)",
+        ["1  Eng & Tech", "2  Management", "3  Law", "6  Humanities  ← no employees"],
+        highlight_rows={3}, highlight_fill=RIGHT_ONLY,
+    )
+    _venn_pair(d, width * 0.76, 74, 28, "right")
+    _label(d, width / 2, 8, "All right rows kept — left columns NULL when unmatched",
+           size=6.5, color=colors.HexColor("#27AE60"))
+    return d
+
+
+def self_join_diagram(width: float) -> Drawing:
+    d = Drawing(width, 118)
+    box_w = width * 0.36
+    left_x = width * 0.06
+    right_x = width * 0.56
+    y = 22
+
+    _table_box(d, left_x, y, box_w, 68, "employees e",
+               ["empID", "empName", "managerID"], header_color=ACCENT)
+    _table_box(d, right_x, y, box_w, 68, "employees m",
+               ["empID", "empName", "managerID"], header_color=NAVY)
+
+    ax, ay = left_x + box_w, y + 34
+    bx, by = right_x, y + 34
+    d.add(Line(ax, ay, bx, by, strokeColor=ACCENT, strokeWidth=1.5))
+    d.add(Line(bx, by, bx - 8, by + 4, strokeColor=ACCENT, strokeWidth=1.5))
+    d.add(Line(bx, by, bx - 8, by - 4, strokeColor=ACCENT, strokeWidth=1.5))
+    _label(d, (ax + bx) / 2, ay + 12, "e.managerID = m.empID", size=7.5, bold=True, color=ACCENT)
+    _label(d, width / 2, 8, "Same table twice — two aliases", size=7, color=GREY)
+    return d
+
+
 def schema_er_diagram(width: float) -> Drawing:
-    d = Drawing(width, 155)
+    d = Drawing(width, 148)
     left_w, right_w = width * 0.38, width * 0.38
     left_x = width * 0.06
     right_x = width * 0.56
-    y = 18
+    y = 14
 
     _table_box(
-        d, left_x, y, left_w, 118, "departments",
+        d, left_x, y, left_w, 112, "departments",
         ["PK  deptID   INTEGER", "    deptName TEXT", "", "6 rows (deptID 1–6)"],
     )
     _table_box(
-        d, right_x, y, right_w, 118, "employees",
-        ["PK  empID      INTEGER", "    empName    TEXT", "FK  deptID     INTEGER", "FK  managerID  INTEGER", "    salary     NUMERIC", "", "7 rows"],
+        d, right_x, y, right_w, 112, "employees",
+        ["PK  empID      INTEGER", "    empName    TEXT", "FK  deptID     INTEGER",
+         "FK  managerID  INTEGER", "    salary     NUMERIC", "", "7 rows"],
     )
 
-    ax, ay = left_x + left_w, y + 78
-    bx, by = right_x, y + 78
+    ax, ay = left_x + left_w, y + 72
+    bx, by = right_x, y + 72
     d.add(Line(ax, ay, bx, by, strokeColor=ACCENT, strokeWidth=1.5))
     d.add(Line(bx, by, bx - 8, by + 4, strokeColor=ACCENT, strokeWidth=1.5))
     d.add(Line(bx, by, bx - 8, by - 4, strokeColor=ACCENT, strokeWidth=1.5))
     _label(d, (ax + bx) / 2, ay + 10, "deptID", size=7.5, bold=True, color=ACCENT)
 
     loop_x = right_x + right_w * 0.5
-    loop_y = y + 28
-    d.add(Circle(loop_x, loop_y, 14, fillColor=LIGHT, strokeColor=ACCENT, strokeWidth=1))
+    loop_y = y + 24
+    d.add(Circle(loop_x, loop_y, 12, fillColor=LIGHT, strokeColor=ACCENT, strokeWidth=1))
     _label(d, loop_x, loop_y - 3, "mgr", size=6, bold=True, color=ACCENT)
-    _label(d, loop_x, loop_y - 22, "managerID → empID (self)", size=6.5, color=GREY)
-
-    _label(d, width / 2, 8, "Figure 1 — Schema: employees.deptID references departments.deptID",
-           size=7.5, color=GREY)
-    return d
-
-
-def _venn_pair(d: Drawing, cx: float, cy: float, r: float,
-               mode: str, title: str) -> None:
-    """Draw two overlapping circles; mode = inner | left | right | natural."""
-    lx, rx = cx - r * 0.55, cx + r * 0.55
-    left_c = Circle(lx, cy, r, fillColor=LEFT_ONLY, strokeColor=NAVY, strokeWidth=1, fillOpacity=0.55)
-    right_c = Circle(rx, cy, r, fillColor=RIGHT_ONLY, strokeColor=NAVY, strokeWidth=1, fillOpacity=0.55)
-    d.add(left_c)
-    d.add(right_c)
-
-    overlap = Circle(cx, cy, r * 0.45, fillColor=MATCH_FILL, strokeColor=ACCENT,
-                     strokeWidth=1.2, fillOpacity=0.9)
-    if mode in ("inner", "natural"):
-        d.add(overlap)
-    elif mode == "left":
-        d.add(Circle(lx, cy, r, fillColor=LEFT_ONLY, strokeColor=NAVY, strokeWidth=1.2, fillOpacity=0.75))
-        d.add(overlap)
-    elif mode == "right":
-        d.add(Circle(rx, cy, r, fillColor=RIGHT_ONLY, strokeColor=NAVY, strokeWidth=1.2, fillOpacity=0.75))
-        d.add(overlap)
-
-    _label(d, lx, cy + r + 10, "employees", size=6.5, color=NAVY)
-    _label(d, rx, cy + r + 10, "departments", size=6.5, color=NAVY)
-    _label(d, cx, cy - r - 8, title, size=7.5, bold=True, color=NAVY)
-
-
-def join_venn_overview(width: float) -> Drawing:
-    d = Drawing(width, 230)
-    cell_w = width / 2
-    specs = [
-        (cell_w * 0.5, 165, "inner", "INNER JOIN"),
-        (cell_w * 1.5, 165, "natural", "NATURAL JOIN"),
-        (cell_w * 0.5, 55, "left", "LEFT OUTER JOIN"),
-        (cell_w * 1.5, 55, "right", "RIGHT OUTER JOIN"),
-    ]
-    for cx, cy, mode, title in specs:
-        _venn_pair(d, cx, cy, 34, mode, title)
-
-    legend_y = 8
-    for i, (label, fill) in enumerate([
-        ("Matched rows", MATCH_FILL),
-        ("Left table preserved", LEFT_ONLY),
-        ("Right table preserved", RIGHT_ONLY),
-    ]):
-        lx = 12 + i * (width / 3.2)
-        d.add(Rect(lx, legend_y, 10, 10, fillColor=fill, strokeColor=NAVY, strokeWidth=0.6))
-        _label(d, lx + 14, legend_y + 2, label, size=6.5, color=GREY, anchor="start")
-
-    _label(d, width / 2, 218, "Figure 2 — Join types as set operations (NATURAL ≡ INNER when deptID is the only common column)",
-           size=7.5, color=GREY)
-    return d
-
-
-def data_mapping_diagram(width: float) -> Drawing:
-    """Lines connect matching deptIDs; orphans highlighted."""
-    d = Drawing(width, 210)
-    dept_rows = [
-        (1, "Eng & Tech"),
-        (2, "Management"),
-        (3, "Law"),
-        (4, "Agriculture"),
-        (5, "Medical"),
-        (6, "Humanities"),
-    ]
-    emp_rows = [
-        (1, "Ananya", 1),
-        (2, "Rohan", 2),
-        (3, "Priya", 3),
-        (4, "Vikram", 4),
-        (5, "Fatima", 1),
-        (6, "Arjun", 5),
-        (7, "Neha", 99),
-    ]
-    dept_ids = {did for did, _ in dept_rows}
-    emp_dept_ids = {did for _, _, did in emp_rows}
-    matched = dept_ids & emp_dept_ids
-    orphan_emp = [e for e in emp_rows if e[2] not in dept_ids]
-    orphan_dept = [r for r in dept_rows if r[0] not in emp_dept_ids]
-
-    left_x, right_x = 8, width - 108
-    box_w = 100
-    top_y = 175
-    row_h = 22
-
-    _table_box(d, left_x, top_y - len(emp_rows) * row_h - 4, box_w,
-               len(emp_rows) * row_h + 22, "employees",
-               [f"{eid}. {name[:8]:<8} dept={did}" for eid, name, did in emp_rows])
-    _table_box(d, right_x, top_y - len(dept_rows) * row_h - 4, box_w,
-               len(dept_rows) * row_h + 22, "departments",
-               [f"{did}. {name[:12]}" for did, name in dept_rows])
-
-    def row_center(idx: int, count: int, base_y: float) -> float:
-        return base_y - 14 - idx * row_h - row_h / 2
-
-    emp_base = top_y - 4
-    dept_base = top_y - 4
-    for i, (_, _, did) in enumerate(emp_rows):
-        if did not in dept_ids:
-            continue
-        dept_idx = next(j for j, (d_id, _) in enumerate(dept_rows) if d_id == did)
-        y1 = row_center(i, len(emp_rows), emp_base)
-        y2 = row_center(dept_idx, len(dept_rows), dept_base)
-        d.add(Line(left_x + box_w, y1, right_x, y2, strokeColor=ACCENT, strokeWidth=0.8))
-
-    for i, (_, _, did) in enumerate(emp_rows):
-        if did not in dept_ids:
-            y = row_center(i, len(emp_rows), emp_base)
-            d.add(Rect(left_x + 2, y - 8, box_w - 4, 16, fillColor=ORPHAN, fillOpacity=0.45,
-                       strokeColor=colors.HexColor("#C0392B"), strokeWidth=0.8, strokeDashArray=[3, 2]))
-            _label(d, left_x + box_w + 14, y, "no match → LEFT JOIN keeps", size=6, color=colors.HexColor("#C0392B"), anchor="start")
-
-    for j, (did, _) in enumerate(dept_rows):
-        if did not in emp_dept_ids:
-            y = row_center(j, len(dept_rows), dept_base)
-            d.add(Rect(right_x + 2, y - 8, box_w - 4, 16, fillColor=RIGHT_ONLY, fillOpacity=0.55,
-                       strokeColor=colors.HexColor("#27AE60"), strokeWidth=0.8, strokeDashArray=[3, 2]))
-            _label(d, right_x - 8, y, "← RIGHT JOIN keeps", size=6, color=colors.HexColor("#27AE60"), anchor="end")
-
-    _label(d, width / 2, 6, "Figure 3 — Row matching on deptID (solid = match, dashed = preserved by outer join)",
-           size=7.5, color=GREY)
-    return d
-
-
-def self_join_diagram(width: float) -> Drawing:
-    """employees joined to itself on managerID."""
-    d = Drawing(width, 130)
-    box_w = width * 0.38
-    left_x = width * 0.08
-    right_x = width * 0.54
-    y = 28
-
-    _table_box(d, left_x, y, box_w, 72, "employees e",
-               ["empID", "empName", "managerID"], header_color=ACCENT)
-    _table_box(d, right_x, y, box_w, 72, "employees m",
-               ["empID", "empName", "managerID"], header_color=NAVY)
-
-    ax, ay = left_x + box_w, y + 36
-    bx, by = right_x, y + 36
-    d.add(Line(ax, ay, bx, by, strokeColor=ACCENT, strokeWidth=1.5))
-    d.add(Line(bx, by, bx - 8, by + 4, strokeColor=ACCENT, strokeWidth=1.5))
-    d.add(Line(bx, by, bx - 8, by - 4, strokeColor=ACCENT, strokeWidth=1.5))
-    _label(d, (ax + bx) / 2, ay + 10, "e.managerID = m.empID", size=7, bold=True, color=ACCENT)
-    _label(d, width / 2, 8, "Figure 5 — SELF JOIN: same table, two aliases",
-           size=7.5, color=GREY)
-    return d
-
-
-def join_result_snapshot(width: float) -> Drawing:
-    """Mini result cards coloured by join outcome."""
-    d = Drawing(width, 200)
-    joins = [
-        ("CROSS JOIN", "42", ORPHAN, "6 depts × 7 emps"),
-        ("INNER / NATURAL", "6", MATCH_FILL, "Matched deptID only"),
-        ("LEFT OUTER", "7", LEFT_ONLY, "+ Neha (NULL dept)"),
-        ("RIGHT OUTER", "7", RIGHT_ONLY, "+ Humanities"),
-        ("SELF JOIN", "7", MATCH_FILL, "Employee → manager"),
-    ]
-    card_w = (width - 32) / 5
-    for i, (name, count, fill, note) in enumerate(joins):
-        x = 8 + i * (card_w + 2)
-        d.add(Rect(x, 40, card_w, 130, fillColor=WHITE, strokeColor=NAVY, strokeWidth=1))
-        d.add(Rect(x, 150, card_w, 20, fillColor=NAVY, strokeColor=NAVY, strokeWidth=0))
-        _label(d, x + card_w / 2, 157, name, size=6, bold=True, color=WHITE)
-        d.add(Rect(x + 8, 88, card_w - 16, 38, fillColor=fill, strokeColor=ACCENT, strokeWidth=0.8, fillOpacity=0.7))
-        _label(d, x + card_w / 2, 104, count, size=14, bold=True, color=NAVY)
-        _label(d, x + card_w / 2, 62, note, size=5.5, color=GREY)
-
-    _label(d, width / 2, 12, "Figure 6 — Result set sizes from this lab dataset",
-           size=7.5, color=GREY)
+    _label(d, loop_x, loop_y - 18, "managerID → empID", size=6.5, color=GREY)
     return d
 
 
 def figure(drawing: Drawing, caption: str | None = None) -> list:
-    items: list = [Spacer(1, 0.2 * cm), DrawingFlowable(drawing), Spacer(1, 0.15 * cm)]
+    items: list = [Spacer(1, 0.25 * cm), DrawingFlowable(drawing), Spacer(1, 0.2 * cm)]
     if caption:
         cap_style = ParagraphStyle(
             "fig_cap", parent=S["body"], fontSize=8, alignment=TA_CENTER,
-            textColor=GREY, spaceAfter=6,
+            textColor=GREY, spaceAfter=10, leading=11,
         )
         items.append(Paragraph(caption, cap_style))
     return items
+
+
+def theory_block(title: str, body: str, drawing: Drawing, caption: str) -> list:
+    """Keep subsection text and its figure together on one page when possible."""
+    block = [
+        sub(title),
+        para(body),
+        *figure(drawing, caption),
+    ]
+    return [KeepTogether(block)]
 
 
 def cover(st, exp_no: str, title: str, methods: str, dataset: str, lab_date: str):
@@ -589,17 +569,21 @@ def build() -> None:
     ))
 
     st.append(heading("2. Theory"))
-    st.append(sub("2.1 CROSS JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.1 CROSS JOIN",
         "A <font face='Courier'>CROSS JOIN</font> returns the Cartesian product "
         "of two tables: every row from the first table is paired with every row "
         "from the second. There is no join condition. With 6 departments and "
         "7 employees the result has 6 × 7 = <b>42 rows</b>. Cross joins are "
         "rare in everyday queries but useful for generating combinations "
-        "(e.g. all size–colour pairs) or as a building block for other joins."
+        "(e.g. all size–colour pairs) or as a building block for other joins.",
+        cross_join_diagram(CONTENT_W),
+        "<i>Figure 1</i> — CROSS JOIN pairs every department row with every employee row (42 combinations).",
     ))
-    st.append(sub("2.2 NATURAL JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.2 NATURAL JOIN",
         "A <font face='Courier'>NATURAL JOIN</font> automatically matches rows "
         "on every column that appears in both tables with the same name. Here, "
         "both tables share <font face='Courier'>deptID</font>, so the condition "
@@ -608,35 +592,47 @@ def build() -> None:
         "<font face='Courier'>INNER JOIN</font> when "
         "<font face='Courier'>deptID</font> is the sole common column. "
         "(SQL Server does not support <font face='Courier'>NATURAL JOIN</font>; "
-        "use an explicit <font face='Courier'>INNER JOIN</font> instead.)"
+        "use an explicit <font face='Courier'>INNER JOIN</font> instead.)",
+        natural_join_diagram(CONTENT_W),
+        "<i>Figure 2</i> — NATURAL JOIN keeps only rows where <font face='Courier'>deptID</font> matches in both tables.",
     ))
-    st.append(sub("2.3 INNER JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.3 INNER JOIN",
         "An <font face='Courier'>INNER JOIN</font> returns only rows where the "
         "explicit join condition is satisfied. Unmatched rows from either table "
         "are discarded. It is the most common join: use it when you only want "
-        "records that have a partner on both sides."
+        "records that have a partner on both sides.",
+        inner_join_diagram(CONTENT_W),
+        "<i>Figure 3</i> — INNER JOIN returns only the overlapping region (6 matched rows).",
     ))
-    st.append(sub("2.4 LEFT OUTER JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.4 LEFT OUTER JOIN",
         "A <font face='Courier'>LEFT OUTER JOIN</font> keeps every row from the "
         "left table. If no match exists in the right table, the right-hand "
         "columns are filled with <font face='Courier'>NULL</font>. Employee "
         "<font face='Courier'>Neha Gupta</font> (deptID 99) has no matching "
-        "department and therefore appears with a null department name."
+        "department and therefore appears with a null department name.",
+        left_outer_join_diagram(CONTENT_W),
+        "<i>Figure 4</i> — LEFT OUTER JOIN preserves Neha (deptID 99) even though no department matches.",
     ))
-    st.append(sub("2.5 RIGHT OUTER JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.5 RIGHT OUTER JOIN",
         "A <font face='Courier'>RIGHT OUTER JOIN</font> keeps every row from the "
         "right table. Unmatched left-hand columns become "
         "<font face='Courier'>NULL</font>. "
         "<font face='Courier'>School of Humanities</font> (deptID 6) has no "
         "employees and therefore appears with null employee fields. A "
         "<font face='Courier'>RIGHT JOIN</font> can always be rewritten as a "
-        "<font face='Courier'>LEFT JOIN</font> by swapping the table order."
+        "<font face='Courier'>LEFT JOIN</font> by swapping the table order.",
+        right_outer_join_diagram(CONTENT_W),
+        "<i>Figure 5</i> — RIGHT OUTER JOIN preserves Humanities (deptID 6) even though no employee belongs to it.",
     ))
-    st.append(sub("2.6 SELF JOIN"))
-    st.append(para(
+
+    st.extend(theory_block(
+        "2.6 SELF JOIN",
         "A <font face='Courier'>SELF JOIN</font> joins a table to itself using "
         "two different aliases. It is not a separate SQL keyword — it is an "
         "<font face='Courier'>INNER</font> or <font face='Courier'>LEFT JOIN</font> "
@@ -644,8 +640,11 @@ def build() -> None:
         "<font face='Courier'>employees e</font> is joined to "
         "<font face='Courier'>employees m</font> on "
         "<font face='Courier'>e.managerID = m.empID</font> to list each "
-        "employee alongside their manager's name."
+        "employee alongside their manager's name.",
+        self_join_diagram(CONTENT_W),
+        "<i>Figure 6</i> — SELF JOIN: the same table appears twice with different aliases.",
     ))
+
     st.append(sub("2.7 Differences between all join types"))
     st.append(table(
         [
@@ -672,16 +671,18 @@ def build() -> None:
         "aliases), not a separate result category — it uses inner or outer join "
         "semantics on a single table."
     ))
-    st.extend(figure(join_venn_overview(CONTENT_W)))
 
     st.append(heading("3. Schema"))
     st.append(para(
         "Two tables are linked by <font face='Courier'>deptID</font>. "
         "<font face='Courier'>employees</font> also references itself through "
-        "<font face='Courier'>managerID</font> for the self join."
+        "<font face='Courier'>managerID</font> for the self join (see Figure 6)."
     ))
-    st.extend(figure(schema_er_diagram(CONTENT_W)))
-    st.extend(figure(self_join_diagram(CONTENT_W)))
+    st.extend(figure(
+        schema_er_diagram(CONTENT_W),
+        "<i>Figure 7</i> — Schema: <font face='Courier'>employees.deptID</font> references "
+        "<font face='Courier'>departments.deptID</font>; <font face='Courier'>managerID</font> is a self-reference.",
+    ))
     st.append(table(
         [
             ["Table", "Attribute", "Type", "Role"],
@@ -706,7 +707,6 @@ def build() -> None:
     st.append(para("6. Run <font face='Courier'>LEFT OUTER JOIN</font> — expect seven rows (one employee without a department)."))
     st.append(para("7. Run <font face='Courier'>RIGHT OUTER JOIN</font> — expect seven rows (one department without employees)."))
     st.append(para("8. Run <font face='Courier'>SELF JOIN</font> — expect seven rows listing each employee and their manager."))
-    st.extend(figure(data_mapping_diagram(CONTENT_W)))
 
     st.append(heading("5. Source Code"))
     st.append(code_block(sql_text, size=6.4, leading=8.0))
@@ -719,7 +719,7 @@ def build() -> None:
     st.append(code_block(output, size=6.2, leading=7.8))
 
     st.append(heading("7. Results"))
-    st.extend(figure(join_result_snapshot(CONTENT_W)))
+    st.append(para("Row counts returned by each join on this dataset:"))
     st.append(table(
         [
             ["Join type", "Rows returned", "Unmatched handling"],
