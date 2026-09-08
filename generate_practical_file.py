@@ -14,7 +14,10 @@ Requires: reportlab, pypdf
 
 from __future__ import annotations
 
+import argparse
+import importlib.util
 import io
+import tempfile
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter
@@ -56,6 +59,13 @@ STUDENT = {
 }
 
 FOOTER = f"DBMS Practical File · {STUDENT['name']} · {STUDENT['roll']}"
+
+
+def set_student(name: str, roll: str) -> None:
+    STUDENT["name"] = name
+    STUDENT["roll"] = roll
+    global FOOTER
+    FOOTER = f"DBMS Practical File · {name} · {roll}"
 
 NAVY = colors.HexColor("#14375E")
 ACCENT = colors.HexColor("#2E75B6")
@@ -114,7 +124,7 @@ S = {
 
 
 class Report(BaseDocTemplate):
-    def __init__(self, buffer: io.BytesIO, footer: str, **kw):
+    def __init__(self, buffer: io.BytesIO, footer: str, *, cover_first: bool = False, **kw):
         self.footer_text = footer
         super().__init__(
             buffer, pagesize=A4,
@@ -125,10 +135,14 @@ class Report(BaseDocTemplate):
             MARGIN, MARGIN + 0.4 * cm, CONTENT_W,
             PAGE_H - 2 * MARGIN - 0.4 * cm, id="main",
         )
-        self.addPageTemplates([
-            PageTemplate(id="plain", frames=[frame]),
-            PageTemplate(id="content", frames=[frame], onPage=self._footer),
-        ])
+        content = PageTemplate(id="content", frames=[frame], onPage=self._footer)
+        if cover_first:
+            self.addPageTemplates([
+                PageTemplate(id="plain", frames=[frame]),
+                content,
+            ])
+        else:
+            self.addPageTemplates([content])
 
     def _footer(self, canv, doc):
         canv.saveState()
@@ -181,11 +195,19 @@ def table(rows, col_widths=None, pad: int = 5):
     return t
 
 
-def build_pdf_bytes(story: list) -> bytes:
+def build_pdf_bytes(story: list, *, cover_first: bool = False) -> bytes:
     buf = io.BytesIO()
-    doc = Report(buf, FOOTER)
+    doc = Report(buf, FOOTER, cover_first=cover_first)
     doc.multiBuild(story)
     return buf.getvalue()
+
+
+def load_lab_report(folder: str):
+    path = ROOT / folder / "generate_report.py"
+    spec = importlib.util.spec_from_file_location(f"lab_{folder.replace('-', '_')}", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def index_table() -> Table:
@@ -218,7 +240,6 @@ def index_table() -> Table:
 
 def practical_cover() -> list:
     st: list = []
-    st.append(NextPageTemplate("plain"))
     st.append(Spacer(1, 0.35 * cm))
     st.append(Paragraph("Practical File", S["center"]))
     st.append(Paragraph("On", S["center"]))
@@ -268,6 +289,7 @@ def practical_cover() -> list:
         hAlign="LEFT",
     )
     st.append(submitted)
+    st.append(NextPageTemplate("content"))
     st.append(PageBreak())
     return st
 
@@ -389,32 +411,68 @@ def banner_pdf(no: str, title: str) -> bytes:
     return build_pdf_bytes(experiment_banner(no, title))
 
 
-def merge_reports() -> None:
-    # Ensure individual reports exist
-    for exp in EXPERIMENTS[1:]:
-        report = exp.get("report")
-        if report and not report.exists():
-            raise FileNotFoundError(f"Missing report: {report}. Run generate_report.py in that folder first.")
+def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -> None:
+    dest = Path(out) if out else OUT_PDF
+    dest.parent.mkdir(parents=True, exist_ok=True)
 
-    writer = PdfWriter()
-    front = build_pdf_bytes(practical_cover() + lab_index())
-    writer.append(PdfReader(io.BytesIO(front)))
+    joins = load_lab_report("02-09-2026")
+    joins.STUDENT["name"] = STUDENT["name"]
+    joins.STUDENT["roll"] = STUDENT["roll"]
 
-    # Experiment 1 — generated inline
-    exp1 = build_pdf_bytes(build_experiment_1())
-    writer.append(PdfReader(io.BytesIO(exp1)))
+    emp = load_lab_report("26-08-2026")
+    emp.STUDENT["name"] = STUDENT["name"]
+    emp.STUDENT["roll"] = STUDENT["roll"]
 
-    # Experiments 2 & 3 — banner + body (skip per-report cover page)
-    for exp in EXPERIMENTS[1:]:
-        writer.append(PdfReader(io.BytesIO(banner_pdf(exp["no"], exp["title"]))))
-        reader = PdfReader(str(exp["report"]))
+    tmp_dir = None
+    if rebuild_standalone:
+        exp2_pdf = EXPERIMENTS[1]["report"]
+        if not exp2_pdf.exists():
+            raise FileNotFoundError(
+                f"Missing report: {exp2_pdf}. Run generate_report.py in 26-08-2026 first."
+            )
+        joins.build()
+    else:
+        tmp_dir = tempfile.TemporaryDirectory()
+        emp.OUT_PDF = Path(tmp_dir.name) / "employees.pdf"
+        emp.build()
+        exp2_pdf = emp.OUT_PDF
+
+    try:
+        writer = PdfWriter()
+        front = build_pdf_bytes(practical_cover() + lab_index(), cover_first=True)
+        writer.append(PdfReader(io.BytesIO(front)))
+
+        exp1 = build_pdf_bytes(build_experiment_1())
+        writer.append(PdfReader(io.BytesIO(exp1)))
+
+        # Experiment 2 — banner + body (skip per-report cover page)
+        exp2 = EXPERIMENTS[1]
+        writer.append(PdfReader(io.BytesIO(banner_pdf(exp2["no"], exp2["title"]))))
+        reader = PdfReader(str(exp2_pdf))
         for page in reader.pages[1:]:
             writer.add_page(page)
 
-    with OUT_PDF.open("wb") as f:
-        writer.write(f)
-    print(f"Wrote {OUT_PDF} ({len(writer.pages)} pages)")
+        # Experiment 3 — banner on the same page as Aim (no blank title sheet)
+        exp3 = EXPERIMENTS[2]
+        exp3_story = experiment_banner(exp3["no"], exp3["title"]) + joins.build_story(
+            include_cover=False
+        )
+        writer.append(PdfReader(io.BytesIO(build_pdf_bytes(exp3_story))))
+
+        with dest.open("wb") as f:
+            writer.write(f)
+        print(f"Wrote {dest} ({len(writer.pages)} pages)")
+    finally:
+        if tmp_dir is not None:
+            tmp_dir.cleanup()
 
 
 if __name__ == "__main__":
-    merge_reports()
+    parser = argparse.ArgumentParser(description="Build the compiled DBMS practical file.")
+    parser.add_argument("--name", help="Student name on the cover and footer")
+    parser.add_argument("--roll", help="Roll number on the cover and footer")
+    parser.add_argument("--out", type=Path, help="Output PDF path (does not overwrite repo reports)")
+    args = parser.parse_args()
+    if args.name or args.roll:
+        set_student(args.name or STUDENT["name"], args.roll or STUDENT["roll"])
+    merge_reports(out=args.out, rebuild_standalone=args.out is None)

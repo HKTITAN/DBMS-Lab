@@ -429,7 +429,7 @@ def build() -> None:
 
     write_report(
         OUT_PDF,
-        "DBMS Lab · 26-08-2026 · Employees Table · Harshit Khemani",
+        f"DBMS Lab · 26-08-2026 · Employees Table · {STUDENT['name']}",
         st,
     )
     print(f"Wrote {OUT_PDF}")
