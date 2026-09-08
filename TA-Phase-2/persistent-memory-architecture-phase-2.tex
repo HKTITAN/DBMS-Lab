@@ -1,0 +1,946 @@
+%=====================================================================
+%  Persistent Memory Architecture in Agents Using DBMS
+%  Phase 2 -- Comparison, Findings and Recommendation
+%  Term Paper -- Thematic Assessment 2
+%  Harshit Khemani (241302081), Kush Ahuja, Madhav Bassi,
+%  Kushagra Agrawal
+%  B.Tech CSE (AI/ML), Section C
+%  Department of Computer Science & Engineering, SGT University
+%
+%  Typography, palette and rhythm carry over from Phase 1 so the two
+%  reports read as one series. The content does not: no section of the
+%  Phase 1 report is reproduced here.
+%
+%  Prose follows ASD-STE100: active voice, simple tense, short sentences.
+%=====================================================================
+\documentclass[11pt,a4paper]{article}
+
+%---------------------------- fonts ---------------------------------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{XCharter}                    % body serif
+\usepackage[scaled=0.95]{FiraSans}       % sans, for headings and labels
+\usepackage[varqu,scaled=0.98]{zi4}      % Inconsolata mono
+\usepackage[charter,vvarbb]{newtxmath}
+\renewcommand{\familydefault}{\rmdefault}
+\usepackage[letterspace=80]{microtype}
+
+%---------------------------- layout --------------------------------
+\usepackage[a4paper,top=2.8cm,bottom=2.8cm,left=3.75cm,right=3.75cm,
+            headheight=14pt,footskip=1.1cm]{geometry}
+
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{listings}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{float}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,calc,shapes.geometric,
+                decorations.pathreplacing}
+\usepackage[hidelinks,breaklinks=true]{hyperref}
+% Break a long URL at punctuation only. Breaking at any character, which
+% is what xurl allows, splits "https:" from "//" and cuts words in half.
+% hyperref rewrites these at \begin{document}, so set them after it. An
+% empty \UrlBigBreaks stops the break after "https:", and a small
+% \Urlmuskip keeps the break points from opening visible gaps.
+\AtBeginDocument{%
+  \def\UrlBreaks{\do\/\do\-\do\.\do\_\do\?\do\&\do\=}%
+  \def\UrlBigBreaks{}%
+  \Urlmuskip=0mu plus 1mu\relax}
+
+\hypersetup{
+  pdftitle={Persistent Memory Architecture in Agents Using DBMS ---
+            Phase 2: Comparison, Findings and Recommendation},
+  pdfauthor={Harshit Khemani (241302081), Kush Ahuja, Madhav Bassi,
+             Kushagra Agrawal},
+  pdfsubject={Database Management Systems --- Term Paper, Phase 2},
+  pdfkeywords={agent memory, DBMS, constraints, request amplification,
+               lost update, bitemporal, normalisation, PostgreSQL}
+}
+
+%---------------------------- colour --------------------------------
+% The Phase 1 palette, unchanged. Blue carries structure. Clay carries
+% anything the agent does not own. Every text colour clears 4.5:1.
+\definecolor{ink}     {HTML}{1A1D21}
+\definecolor{blue800} {HTML}{1E3A5F}
+\definecolor{blue600} {HTML}{35618F}
+\definecolor{blue200} {HTML}{C2D5E8}
+\definecolor{blue100} {HTML}{E8EFF7}
+\definecolor{clay700} {HTML}{8A5A2B}
+\definecolor{clay600} {HTML}{A8703A}
+\definecolor{clay200} {HTML}{E6D3BC}
+\definecolor{clay100} {HTML}{F7EEE3}
+\definecolor{grey600} {HTML}{5C6570}
+\definecolor{grey300} {HTML}{CBD0D7}
+\definecolor{grey100} {HTML}{F1F3F6}
+
+\color{ink}
+
+%------------------------ vertical rhythm ---------------------------
+\linespread{1.16}\selectfont
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.62\baselineskip}
+\setlist{topsep=0.3\baselineskip,itemsep=0.18\baselineskip,parsep=0pt,
+         leftmargin=1.25em}
+
+\clubpenalty=10000
+\widowpenalty=10000
+\displaywidowpenalty=10000
+\raggedbottom
+\setlength{\emergencystretch}{1.5em}
+\renewcommand{\arraystretch}{1.25}
+
+% Each of the three criteria has a page budget, so floats have to pack
+% tightly. LaTeX's defaults reserve a fifth of every page with a float
+% for running text and refuse a top float larger than 70% of the page;
+% both push a table to the next page and leave the current one short.
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.75}
+\renewcommand{\textfraction}{0.06}
+\renewcommand{\floatpagefraction}{0.80}
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+
+%---------------------------- headers -------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\footnotesize\sffamily\color{grey600}%
+  Persistent Memory Architecture \textperiodcentered\ Phase 2}
+\fancyhead[R]{\footnotesize\sffamily\color{grey600}%
+  Khemani \textperiodcentered\ Ahuja \textperiodcentered\ Bassi
+  \textperiodcentered\ Agrawal}
+\fancyfoot[C]{\footnotesize\sffamily\color{grey600}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\headrule}{\color{grey300}%
+  \hrule height 0.4pt width \headwidth}
+\fancypagestyle{plain}{\fancyhf{}%
+  \fancyfoot[C]{\footnotesize\sffamily\color{grey600}\thepage}%
+  \renewcommand{\headrulewidth}{0pt}}
+
+%---------------------------- headings ------------------------------
+\titleformat{\section}
+  {\sffamily\bfseries\large\color{blue800}}{\thesection}{0.65em}{}
+\titlespacing*{\section}{0pt}{1.5\baselineskip}{0.45\baselineskip}
+\titleformat{\subsection}
+  {\sffamily\bfseries\normalsize\color{ink}}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{1.05\baselineskip}{0.25\baselineskip}
+
+%---------------------------- captions ------------------------------
+\captionsetup{font={small},labelfont={sf,bf,color=blue800},
+              labelsep=period,skip=7pt,width=0.95\textwidth}
+
+%---------------------------- listings ------------------------------
+\lstdefinestyle{base}{
+  backgroundcolor=\color{grey100},
+  basicstyle=\ttfamily\scriptsize\color{ink},
+  keywordstyle=\color{blue800}\bfseries,
+  stringstyle=\color{clay700},
+  commentstyle=\color{grey600},
+  numbers=none,
+  showstringspaces=false,
+  breaklines=true,
+  frame=leftline,
+  framerule=1.6pt,
+  rulecolor=\color{blue200},
+  framexleftmargin=6pt,
+  xleftmargin=8pt,
+  tabsize=2,
+  captionpos=b,
+  columns=fullflexible,
+  keepspaces=true,
+  aboveskip=0.7\baselineskip,
+  belowskip=0.4\baselineskip
+}
+\lstset{style=base}
+\lstdefinestyle{sql}{style=base,language=SQL,
+  morekeywords={CONFLICT,GENERATED,ALWAYS,STORED,EXCLUDE,USING,GIST,
+    RESTRICT,MATERIALIZED,CONCURRENTLY,tstzrange,int8range,RETURNING,
+    REFERENCES,UNIQUE,DO,NOTHING,DATERANGE}}
+
+%---------------------------- helpers -------------------------------
+\newcommand{\code}[1]{\texttt{\small #1}}
+% \code carries an absolute \small, which is correct in running text
+% and too large inside a \scriptsize table. \ddl inherits the size of
+% whatever cell it sits in, and its argument may carry its own \\.
+\newcommand{\ddl}[1]{\texttt{\begin{tabular}{@{}l@{}}#1\end{tabular}}}
+\newcommand{\tikzcode}[1]{\texttt{#1}}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\arraybackslash}p{#1}}
+% A ragged X. Justified X columns this narrow open word-sized gaps.
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+% Fira's default figures are oldstyle, so a sans-set zero sits at
+% x-height and "Mem0" reads as "Memo". This forces lining figures for
+% one span without changing the numerals anywhere else.
+\newcommand{\lnum}[1]{{\firalining #1}}
+\newcommand{\khe}{\href{https://www.khe.money}{Harshit Khemani}}
+\newcommand{\eyebrow}[1]{{\sffamily\footnotesize\bfseries\color{clay700}%
+  \MakeUppercase{\textls[140]{#1}}}}
+% A finding label. The recommendation cites these numbers by name.
+\newcommand{\finding}[1]{{\sffamily\bfseries\color{blue800}#1}\quad}
+
+%---------------------------- tikz ----------------------------------
+\tikzset{every picture/.append style={
+  execute at begin picture={\let\code\tikzcode\linespread{1.0}\selectfont}}}
+\tikzset{
+  box/.style   ={draw=blue200, line width=0.7pt, fill=blue100,
+                 rounded corners=2pt, align=center, inner sep=5pt,
+                 font=\sffamily\footnotesize},
+  boxc/.style  ={draw=clay200, line width=0.7pt, fill=clay100,
+                 rounded corners=2pt, align=center, inner sep=5pt,
+                 font=\sffamily\footnotesize},
+  boxn/.style  ={draw=grey300, line width=0.7pt, fill=white,
+                 rounded corners=2pt, align=center, inner sep=5pt,
+                 font=\sffamily\footnotesize},
+  ar/.style    ={-{Stealth[length=2mm]}, draw=blue600, line width=0.7pt},
+  arc/.style   ={-{Stealth[length=2mm]}, draw=clay600, line width=0.7pt},
+  arn/.style   ={-{Stealth[length=2mm]}, draw=grey300, line width=0.7pt,
+                 dashed},
+  tag/.style   ={font=\sffamily\scriptsize, text=grey600, inner sep=2pt},
+  card/.style  ={font=\sffamily\scriptsize, text=grey600, fill=white,
+                 inner sep=1.5pt},
+  note/.style  ={font=\sffamily\scriptsize, text=clay700, align=left},
+  bar/.style   ={draw=none, fill=blue600},
+  barc/.style  ={draw=none, fill=clay600},
+  barl/.style  ={font=\sffamily\scriptsize, text=ink, anchor=east},
+  barv/.style  ={font=\sffamily\scriptsize, text=grey600, anchor=west},
+  gridline/.style={draw=grey300, line width=0.4pt}
+}
+
+\begin{document}
+
+%=====================================================================
+%  TITLE PAGE
+%=====================================================================
+\begin{titlepage}
+\centering
+\sffamily
+\linespread{1.0}\selectfont
+\setlength{\parskip}{0pt}
+\vspace*{1.2cm}
+
+{\footnotesize\bfseries\color{grey600}%
+ \textls[140]{SHREE GURU GOBIND SINGH TRICENTENARY UNIVERSITY}}\\[3pt]
+{\footnotesize\color{grey600}Gurugram, Haryana}\\[1.1cm]
+
+{\color{blue200}\rule{\textwidth}{1pt}}\\[9pt]
+{\large\bfseries\color{ink}Department of Computer Science \& Engineering}\\[7pt]
+{\color{blue200}\rule{\textwidth}{0.5pt}}\\[1.6cm]
+
+\eyebrow{Term Paper \textperiodcentered\ Thematic Assessment, Phase 2}\\[9pt]
+{\normalsize\color{grey600}Database Management Systems Laboratory}\\[1.3cm]
+
+% A tabular with a \strut in every row: each row then has identical
+% height and depth, so the two 7pt gaps render exactly equal.
+{\fontsize{26}{30}\selectfont\bfseries\color{blue800}%
+\begin{tabular}{@{}c@{}}
+\strut Persistent Memory\\[7pt]
+\strut Architecture in\\[7pt]
+\strut Agents Using DBMS
+\end{tabular}}\\[14pt]
+
+{\large\color{clay700}Comparison, Findings and Recommendation}\\[1.8cm]
+
+\begin{minipage}{0.86\textwidth}
+\small
+\renewcommand{\arraystretch}{1.42}
+\begin{tabular}{@{}r@{\hspace{1.5em}}l@{}}
+{\color{grey600}Submitted by}   & \bfseries\khe\ \ \ {\mdseries 241302081} \\
+                               & \bfseries Kush Ahuja \\
+                               & \bfseries Madhav Bassi \\
+                               & \bfseries Kushagra Agrawal \\[4pt]
+{\color{grey600}Programme}     & B.Tech, Computer Science \& Engineering (AI/ML) \\
+{\color{grey600}Section}       & C \\
+{\color{grey600}Department}    & Computer Science \& Engineering \\
+{\color{grey600}Institution}   & SGT University \\
+{\color{grey600}Date of submission} & 10 September 2026 \\
+\end{tabular}
+\end{minipage}
+
+\vfill
+{\color{blue200}\rule{\textwidth}{0.5pt}}\\[6pt]
+{\footnotesize\color{grey600}Academic Session 2026 \quad\textperiodcentered\quad
+ Semester V \quad\textperiodcentered\quad Phase 2 of 2}
+\end{titlepage}
+
+%=====================================================================
+%  FRONT MATTER
+%=====================================================================
+\pagenumbering{roman}
+\setcounter{page}{2}
+
+\section*{\sffamily\color{blue800}Abstract}
+\addcontentsline{toc}{section}{Abstract}
+
+Phase 1 of this term paper argued that the memory of an AI agent is a
+database, and it described how four deployed systems keep facts across a
+session boundary. Phase 2 tests that argument against measurement.
+
+The subject of this phase is \textbf{Lore}, the open-source memory system
+that Notion released for MCP-compatible assistants \cite{loreRepo,
+notionBlog}. Lore is a good subject because it is honest about its own
+trade. It stores agent memory as rows in five Notion databases, so the
+memory stays readable by people and needs no server. In exchange it gives
+up every guarantee a database declares: no unique index, no foreign key,
+no check constraint, no atomic write across pages, no join, no aggregate
+and no conditional write.
+
+This report compares that design against two relational engines that run
+the same schema, reports what the comparison found, and gives one
+recommendation. The evidence comes from our companion study, which
+reconstructed Lore's 80 properties from its source, generated a vault of
+11\,885 memories and 4\,277 facts with definitional ground truth, and ran
+a workload of 361 questions in ten classes through three stores
+\cite{loreStudy}.
+
+The result is not that the document store gives wrong answers. It gives
+right ones. It answers 100.0\% of the workload exactly, and so does
+SQLite; PostgreSQL answers 99.2\%, and its three divergences are a
+stemming rule inside its text index rather than a fault. What separates
+the three is \emph{cost} and \emph{refusal}. The same 361 questions cost the
+Notion Data API 522\,686 requests against 361 SQL statements. Eight
+agents writing one key through a read-then-write protocol lose 87.1\% of
+their updates, and the same workload through a unique index loses none.
+PostgreSQL declines even to add a temporal exclusion constraint to the
+vault, because 70 subject--predicate pairs already contradict themselves.
+
+The recommendation follows from those numbers, and it is not
+``use PostgreSQL''. It is to keep the legible store as the system of
+record and to add a rebuildable relational projection beside it, which
+carries the indexes, the constraints and the joins the legible store
+cannot declare.
+
+\vspace{0.4\baselineskip}
+\eyebrow{Keywords}\\[2pt]
+agent memory, request amplification, lost update, referential integrity,
+bitemporal data, exclusion constraint, normalisation, entity resolution,
+PostgreSQL, SQLite.
+
+\clearpage
+
+{\setlength{\fboxsep}{9pt}%
+\colorbox{clay100}{\parbox{\dimexpr\textwidth-18pt\relax}{\small
+\eyebrow{What this report does not repeat}\\[3pt]
+This is a standalone Phase 2 report. No section, table, figure or
+argument from the Phase 1 report appears here. Phase 1 covered the four
+storage layers, the PostgreSQL schema, the record and recall paths, and
+four case studies. This phase covers only the three criteria set for it:
+\textbf{comparison}, \textbf{findings} and \textbf{recommendation}. It
+takes a new subject system, a new evidence base, and a bibliography that
+shares no research paper with Phase 1. Where a Phase 1 conclusion is
+needed, it is named in one sentence, never reproduced.}}}
+
+\vspace{0.6\baselineskip}
+
+\section*{\sffamily\color{blue800}New Research Added in This Phase}
+\addcontentsline{toc}{section}{New Research Added in This Phase}
+
+The brief for this phase asks for three more research papers. The three
+below are new to this report, none of them appears in Phase 1, and each
+does real work in the sections that follow rather than sitting in the
+list. Table~\ref{tab:new} names what each one contributes and where it is
+used.
+
+\begin{table}[!htbp]
+\centering
+\caption[The three new research papers]{The three research papers added in Phase 2, and the work each
+one does.}
+\label{tab:new}
+{\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{L{3.3cm} Y L{1.5cm}}
+\toprule
+\sffamily\bfseries Paper & \sffamily\bfseries What it contributes here &
+\sffamily\bfseries Used in \\
+\midrule
+\textbf{Zep}, a temporal knowledge graph for agent memory
+\cite{zep,graphiti} &
+Zep attaches a validity interval to every subject--predicate--object
+edge and invalidates an old edge instead of deleting it. It is the
+sharpest prior art for Lore's Facts relation, so it fixes the axis on
+which the comparison of data models is fair. &
+\S\ref{sec:cmp}, \S\ref{sec:f5} \\
+\textbf{Mem0}, scalable long-term memory with explicit operations
+\cite{mem0} &
+Mem0 gives memory a small data manipulation language: the extractor
+decides \code{ADD}, \code{UPDATE}, \code{DELETE} or \code{NOOP} for every
+candidate. That names the axis Phase 1 left open, which is who owns the
+update and where it is applied. &
+\S\ref{sec:cmp}, \S\ref{sec:f7} \\
+\textbf{LongMemEval}, a benchmark for long-term interactive memory
+\cite{longmemeval} &
+It isolates five abilities of a long-term memory, two of which ---
+temporal reasoning and knowledge updates --- are exactly the two a
+validity interval exists to serve, and it measures about a 30\% accuracy
+drop for commercial assistants across sustained interactions. That ties
+the validity interval to abilities a benchmark treats as core. &
+\S\ref{sec:cmp}, \S\ref{sec:f5} \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+Six further sources are also new to this report. Five support the
+argument at specific points: Graphiti, the engine behind Zep
+\cite{graphiti}, the SQL:2011 temporal standard \cite{sql2011}, Gray's
+account of the lost update \cite{gray1976}, Swoosh on entity resolution
+\cite{swoosh}, and a recent survey that maps the operations of an agent
+memory onto the operations of a database \cite{du2025}. The sixth,
+A-MEM \cite{amem}, states the opposing position on whether a memory
+should have a schema at all.
+
+\clearpage
+{\sffamily\setlength{\parskip}{0pt}%
+ \tableofcontents
+ \vspace{1.4\baselineskip}
+ \listoffigures
+ \vspace{1.2\baselineskip}
+ \listoftables}
+\clearpage
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+%=====================================================================
+\section{Comparison}
+\label{sec:cmp}
+%=====================================================================
+
+Phase 1 asked how an agent memory carries a fact across a session
+boundary. That separates designs but does not price them. This phase asks
+a narrower question with a harder answer. \emph{One schema, three stores:
+what does each cost, and what will each refuse?}
+
+\subsection{The subject, and where the numbers come from}
+
+Lore is Notion's open-source memory system for MCP-compatible assistants
+\cite{loreRepo,notionBlog}. A vault is one Notion page holding five
+databases --- Projects, Topics, Memories, Entities and Facts --- all
+reached through the Notion Data API. That API is the whole design: at
+most 100 rows per request, 3 requests per second, and no join, no
+aggregate, no unique index, no check constraint and no conditional write
+\cite{notionApi}.
+
+Every number here comes from our companion study \cite{loreStudy}, which
+reconstructed Lore's 80 properties from \code{src/notion/schema.ts} at
+commit \code{95c3558} and re-implemented the schema on SQLite and on
+PostgreSQL. Its corpus is generated world-first, so every correct answer
+is definitional: 11\,885 memories, 4\,277 facts of which 1\,196 are
+closed, 1\,096 entities carrying 1\,153 aliases. A workload of 361
+questions in ten classes then runs through three arms: an emulator
+restricted to the documented Data API, and the two engines.
+
+\subsection{Three agent memories, compared as data models}
+
+A comparison needs a fair axis, and the three new papers supply it. Zep
+attaches a validity interval to every edge of a temporal knowledge graph,
+so an old claim is invalidated and not deleted \cite{zep,graphiti}. Mem0
+gives the writer explicit operations, so a candidate becomes an
+\code{ADD}, an \code{UPDATE}, a \code{DELETE} or a \code{NOOP}
+\cite{mem0}. Lore sits between them, and Table~\ref{tab:designs} sets the
+three side by side.
+
+\begin{table}[!htbp]
+\centering
+\caption[Three memory designs]{Three agent memory designs as data models. The last row is the one
+the rest of this report measures.}
+\label{tab:designs}
+{\scriptsize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{L{2.25cm} Y Y Y}
+\toprule
+ & \sffamily\bfseries Lore \cite{loreRepo} &
+   \sffamily\bfseries Zep and Graphiti \cite{zep,graphiti} &
+   \sffamily\bfseries \lnum{Mem0} \cite{mem0} \\
+\midrule
+Temporal model &
+Bitemporal. Valid From, Valid Until, Observed At, Invalidated At &
+Bitemporal. An edge records when it was true and when the graph learned
+it &
+Timestamps on the item. No validity interval \\
+
+How an update happens &
+The client reads, decides, then writes. Two requests, and a window
+between them &
+The engine closes the old edge and adds the new one &
+An explicit operation chosen at write time: \code{ADD}, \code{UPDATE},
+\code{DELETE} or \code{NOOP} \\
+
+\midrule
+\sffamily\bfseries The store can refuse a bad write &
+\sffamily\bfseries No. Uniqueness is a convention in the client &
+\sffamily\bfseries Yes, for what the engine declares &
+\sffamily\bfseries Only as far as the writer decides \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+One row is missing on purpose: only Lore is readable and correctable by a
+person without a client, the trade \S\ref{sec:rec} defends. A-MEM argues
+the opposite case to all three, that a fixed schema limits cross-task
+adaptability \cite{amem}; this phase does not settle that, but none of
+the failures in \S\ref{sec:findings} follows from having a schema. Each
+follows from a store that cannot enforce one. LongMemEval justifies the
+temporal row: two of the five abilities it isolates, temporal reasoning
+and knowledge updates, are exactly the two a validity interval exists to
+serve \cite{longmemeval}.
+
+\subsection{One schema, three stores}
+
+Table~\ref{tab:arms} is the centre of this comparison: the same schema,
+the same 361 questions, three stores.
+
+\begin{table}[!htbp]
+\centering
+\caption[The three arms]{The three arms on one workload of 361 questions. Requests and
+client-side rows are means for one question. The rate-limit floor applies
+Notion's documented 3 requests per second to the whole workload; it is a
+lower bound on wall-clock, not a measurement of it, and no rate limit
+applies to a local engine. The PostgreSQL arm is PGlite, the same source
+tree and planner compiled to WebAssembly, so no throughput claim is made
+for it.}
+\label{tab:arms}
+{\footnotesize
+\renewcommand{\arraystretch}{1.28}
+\begin{tabularx}{\textwidth}{X R{2.3cm} R{1.7cm} R{2.0cm}}
+\toprule
+\sffamily\bfseries Measure &
+\sffamily\bfseries Lore on Notion &
+\sffamily\bfseries SQLite &
+\sffamily\bfseries PostgreSQL \\
+\midrule
+Exact-answer rate                   & 100.0\%   & 100.0\% & 99.2\% \\
+\midrule
+Requests, one question              & 1\,447.9  & 1.0     & 1.0 \\
+Requests, whole workload            & 522\,686  & 361     & 361 \\
+Rate-limit floor, whole workload    & 48.4\,h   & ---     & --- \\
+\midrule
+Share of the workload it can state  & 33.2\%    & 100\%   & 100\% \\
+Invariants with no declarative form & 4 of 7    & 1 of 7  & 0 of 7 \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+The last two rows need a note. The first counts what the store can
+\emph{express}: 44.6\% of the questions need a join, 11.4\% an aggregate
+and 11.1\% a transitive closure, so 66.8\% of the workload needs
+something the Data API cannot state as a filter. The second counts what
+it can \emph{refuse}: four of the seven invariants have no declarative
+form on Notion and three of those are guarded by nothing at all, while
+SQLite declares six, failing only on the temporal one for want of an
+exclusion constraint, and PostgreSQL declares all seven.
+Figure~\ref{fig:amp} in \S\ref{sec:f2} draws the uneven distribution
+behind the 1\,447.9 mean.
+
+So the comparison does not separate the three on correctness. It
+separates them on cost, as a multiplier rather than a constant, and on
+refusal, which is categorical: a database's central service is not
+answering a question but declining to enter a state that makes a future
+answer wrong.
+
+%% The brief sets a page budget for each of the three criteria, so
+%% each one starts on a fresh page and its span is countable.
+\clearpage
+%=====================================================================
+\section{Findings}
+\label{sec:findings}
+%=====================================================================
+
+Most of the findings below carry the name of an older database
+phenomenon, because that is what they turn out to be.
+
+\finding{F1} One result frames the rest. \textbf{Correctness is not where
+these designs differ}, so nothing below is about a wrong answer. All
+three stores return the exactly-correct set, and PostgreSQL's 99.2\% is
+the stemming rule of \S\ref{sec:f8}, not a fault. Everything below is
+about what the right answer costs and about what the store will not stop.
+
+\subsection{A missing join costs a multiplier, not a constant}
+\label{sec:f2}
+
+\finding{F2} Provenance is the cheapest join an agent memory can be asked
+for: a claim, the memory it came from, and that memory's author. In SQL
+it is one statement. The Data API cannot filter one database by a
+property of the page a relation points at, so the client pages over Facts
+in 12 requests, reads 1\,126 memory pages one at a time and filters
+itself --- 1\,137.75 round trips and 1\,126.2 client-side rows against
+one and none, a floor of 6.3 minutes for one question.
+
+Searching what the memories \emph{say} is worse. Property filters cannot
+see page blocks and the search endpoint matches titles \cite{notionApi},
+so a complete search is one list request per hundred rows plus one per
+row: 11\,892 requests, 66.1 minutes here, 11.0 hours ten times larger,
+110.1 hours a hundred times larger.
+
+That figure carries the study's own biggest caveat: it measures what the
+\emph{documented} API permits, and Lore delegates ranking to a Notion
+endpoint the study could not measure, so Lore is cheaper here
+\cite{loreStudy}. The structural point survives --- Lore owns no index,
+so its retrieval depends on an endpoint it does not control.
+
+\begin{figure}[!htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[x=1cm,y=1cm]
+% Decade gridlines at 2.5 cm per decade: 1, 10, 100, 1000, 10000.
+% 2.9 cm to the decade. Bar length is log10(value) times that, so the
+% 1.0x class has no bar and 11 892x runs just past the last gridline.
+\foreach \gx/\glab in {0/1,2.9/10,5.8/100,8.7/1000,11.6/10\,000}{
+  \draw[gridline] (\gx,-0.14) -- (\gx,3.14);
+  \node[font=\sffamily\scriptsize,text=grey600,anchor=north]
+    at (\gx,-0.18) {\glab$\times$};
+}
+\foreach \nm/\ln/\vl/\yy/\st in {%
+  body-search/11.818/11\,892$\times$/2.92/barc,
+  provenance/8.863/1\,138$\times$/2.62/barc,
+  conflict-scan/4.197/28.0$\times$/2.32/bar,
+  cross-db/3.840/21.1$\times$/2.02/bar,
+  supersession/1.624/3.6$\times$/1.72/bar,
+  ask-entity/1.384/3.0$\times$/1.42/bar,
+  as-of/1.384/3.0$\times$/1.12/bar,
+  current/1.384/3.0$\times$/0.82/bar,
+  aggregate/0.873/2.0$\times$/0.52/bar,
+  wake-up/0/1.0$\times$/0.22/bar}{
+  \node[barl] at (-0.22,\yy) {\nm};
+  \fill[\st] (0,\yy-0.085) rectangle (\ln,\yy+0.085);
+  \node[barv] at (\ln+0.14,\yy) {\vl};
+}
+\end{tikzpicture}}
+\caption[Request amplification by question class]{Request amplification by question class: the mean number of Data
+API requests that one question costs, against the single SQL statement
+which answers it. The axis is logarithmic and evenly spaced by decade, so
+\code{wake-up} at $1\times$ has no bar to draw. The two clay bars are the
+two classes that pass a thousand requests for one question, and both are
+searches the store cannot push down.}
+\label{fig:amp}
+\end{figure}
+
+\finding{F2b} The prompt is bounded and the work behind it is not. The
+wake-up hook caps its payload at 20 memories and 30 facts, and the cap
+holds: over an eight-fold growth of the vault it still costs 24 requests
+and injects between 775 and 852 tokens. What grows is the class of
+operation touching every row --- the conflict scan, the debt sweep, the
+aggregate, the complete search --- which a rate limit turns into hours.
+Lore's own caps cluster there.
+
+\subsection{A read-then-write upsert loses most of its writes}
+\label{sec:f3}
+
+\finding{F3} Lore upserts a topic-keyed memory by reading the vault for a
+matching row and then creating or patching. The API documents no
+conditional write --- no ETag, no \code{If-Match}, no version token
+\cite{notionApi} --- so the window between read and write cannot be
+closed from the client, and Lore's own source says so. The study ran the
+interleave explicitly rather than leaving it to a scheduler: every writer
+reads before any writer writes, the worst schedule the protocol admits
+and the one the API gives no way to exclude. With 8 writers over 200
+rounds the read-then-write path lost 1\,393 of 1\,600 updates, 87.1\%,
+and left 7 duplicate rows for a key that should hold one. The same
+workload through \code{INSERT \ldots ON CONFLICT} lost none.
+
+The loss grows with contention. A shallower sweep at 2, 4, 8 and 16
+writers lost 49.0\%, 73.5\%, 85.8\% and 91.9\%, against 0.0\% at every
+width through the unique index. This is Gray's lost update
+\cite{gray1976} by a new route: the anomaly needs no weak isolation level
+when the protocol has no conditional write to close on.
+
+\subsection{A constraint the store cannot declare is a state it cannot refuse}
+\label{sec:f4}
+
+\finding{F4} The study took seven invariants from the schema and wrote
+the one line of standard DDL that would enforce each
+(Table~\ref{tab:inv}). Four have no declarative form on the substrate at
+all, and three of those are guarded by nothing whatsoever.
+
+\begin{table}[!htbp]
+\centering
+\caption[The seven invariants]{Seven invariants the schema implies, the declaration that would
+enforce each, and what walks through it today.}
+\label{tab:inv}
+{\scriptsize
+\renewcommand{\arraystretch}{1.1}
+\begin{tabularx}{\textwidth}{L{0.85cm} X L{3.05cm} L{2.5cm}}
+\toprule
+& \sffamily\bfseries Invariant & \sffamily\bfseries Declarative form &
+  \sffamily\bfseries In the vault \\
+\midrule
+INV-1 & At most one memory for one topic key &
+  \ddl{UNIQUE (topic\_key,\\ project\_id)} & Client code \\
+INV-2 & Every fact points at a memory that exists &
+  \ddl{FOREIGN KEY ...\\ ON DELETE RESTRICT} & \bfseries Nothing \\
+INV-3 & One object per functional predicate at any instant &
+  \ddl{EXCLUDE USING gist\\ (... WITH \&\&)} & \bfseries Nothing \\
+INV-4 & Confidence is one of three values &
+  \ddl{CHECK (confidence\\ IN ...)} & Editable options \\
+INV-5 & An alias names exactly one entity &
+  \ddl{UNIQUE (alias)} & \bfseries Nothing \\
+INV-6 & Valid from is not after valid until &
+  \ddl{CHECK (... <= ...)} & Not verifiable \\
+INV-7 & The dedup key is the hash of its own columns &
+  \ddl{GENERATED ALWAYS\\ AS (...)} & Write-time code \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+Three were attacked. INV-1 is F3 above; in the other two the vault
+refused nothing at all. Over 2\,724 facts on functional predicates,
+PostgreSQL under a temporal exclusion constraint accepted 2\,532 and
+refused 192, and the vault refused 0. When 112 memories were archived
+after facts already cited them, \code{ON DELETE RESTRICT} refused all 112
+and left no orphan; the vault accepted all 112 and left 112 claims whose
+provenance it can no longer return. The exclusion result has a sharper
+first half: the constraint could not be added to the vault \emph{as
+generated} at all, because 70 subject--predicate pairs already assert two
+objects over overlapping time.
+
+Lore is not unaware of contradictions --- it ships a scanner, capped at
+500 candidates for each project. The comparison is between preventing a
+state and detecting it afterwards at quadratic cost under a cap.
+Detection is useful, and it is not the same thing.
+
+\subsection{Two time axes disagree often enough to be a correctness decision}
+\label{sec:f5}
+
+\finding{F5} A bitemporal schema is only worth its columns if the two
+axes ever disagree. Here they disagree constantly. A retraction lags the
+world by a median of 23 days and a 95th percentile of 43, and of the
+1\,196 facts whose validity has closed, 1\,172 --- 98.0\% --- were
+retracted only after the claim had stopped being true. A fact disagrees
+on day $D$ when ``was this true on $D$'' and ``did the vault believe it
+on $D$'' give different answers; across all 4\,277 facts, 245 disagree on
+day 120 (5.7\%), 123 on day 240 (2.9\%), 112 on day 360 (2.6\%) and 55 on
+day 480 (1.3\%).
+
+Lore and Zep both hold the two axes \cite{loreRepo,zep}, and SQL:2011
+standardised the separation more than a decade before either
+\cite{sql2011}. LongMemEval measures what getting it wrong costs:
+assistants lose about 30\% of their accuracy across sustained
+interactions \cite{longmemeval}. A query that does not name its axis is a
+correctness error waiting for a probe day.
+
+\subsection{The normalisation violations that ship are substrate costs}
+\label{sec:f6}
+
+\finding{F6} The usual exercise walks a badly shaped relation up to
+Boyce--Codd form. The interesting exercise here is the other one: which
+violations \emph{ship}, and why. Five rungs of a six-rung ladder are
+still in the released product, and none is an oversight. Aliases are a
+comma-joined list in one text cell, so no predicate can ask which entity
+owns an alias; a multi-select would force a schema migration for every
+new alias. Two derived columns stand in for one expression index, because
+the store has none. And the centre of the knowledge graph carries a
+Boyce--Codd violation that is structural rather than careless: every
+Notion database needs exactly one title property, a title cannot be a
+relation, so a fact holds its subject twice.
+
+That violation is reachable by the most ordinary maintenance the system
+has. The merge routine repoints every fact relation from loser to winner
+and never rewrites the title, and the vault was generated to hold what
+that leaves behind: 105 facts, 2.5\% of all, whose title says one name
+and whose relation points at another. Entity resolution has an older
+theory --- Swoosh defines the transitive closure a resolution must reach
+\cite{swoosh} --- and Lore's merge is careful but single-hop, so 39
+subjects have their facts split across two rows.
+
+\textbf{One measurement went the other way.} The study predicted that
+resolving an alias through the joined cell would be expensive, because a
+substring test over-matches, and built 57 aliases as deliberate prefixes
+of others. Across 1\,057 alias terms the filter returned 1\,159 rows of
+which 1\,153 were exact: six discarded, 0.5\% of the traffic. The
+magnitude did not support the argument, so it is reported as measured.
+
+\subsection{The update anomaly lands in the prose, not in the table}
+\label{sec:f7}
+
+\finding{F7} This is the finding a schema alone does not fix. A fact is
+restated across several memories in prose, and when the fact changes the
+Fact row is updated and the prose is not. Across the 1\,196 closed facts,
+3\,867 memories still assert the closed value: a mean of 3.23 stale
+restatements each, and for 33 facts the stale copies alone would fill a
+ten-row recall. An agent that retrieves memories rather than facts
+retrieves the old answer, in a confident sentence, nothing marking it
+retired.
+
+This is the classical update anomaly. Mem0 answers it by making
+\code{UPDATE} and \code{DELETE} explicit operations a writer must choose
+\cite{mem0}. Lore supersedes the fact row, which is correct and
+incomplete, because the copies live where supersession does not reach.
+
+\subsection{Three indexes over one text give two different answers}
+\label{sec:f8}
+
+\finding{F8} The workload turned up a result it was not designed to find.
+Seven test phrases returned identical counts on all three indexes ---
+\emph{call graph} matched 677 memories on each, \emph{error rate} 200,
+\emph{deploy manifest} 152. The eighth did not. \emph{Timed out} appears
+nowhere as a literal string, because the memories say \emph{times out},
+so a literal search and SQLite's FTS5 both return 0 and PostgreSQL
+returns 669: the English configuration stems \emph{timed} to \emph{time}
+and drops \emph{out} as a stop word, so the phrase collapses to the
+lexeme \code{\textquotesingle time\textquotesingle} and matches every
+memory that mentions timing at all.
+
+None of the three is wrong --- a stemmer is a considered position on what
+``discusses this'' means. What matters is that the position is a choice
+and no answer states which choice was made, so two teams on two engines
+reason from two different sets of facts.
+
+%% The brief sets a page budget for each of the three criteria, so
+%% each one starts on a fresh page and its span is countable.
+\clearpage
+%=====================================================================
+\section{Recommendation}
+\label{sec:rec}
+%=====================================================================
+
+The recommendation is not ``use PostgreSQL''. Moving off the document
+substrate forfeits three things that are not conveniences: a surface
+non-engineers can audit, an authorisation model already provisioned, and
+no operational estate at all.
+
+\textbf{Keep the legible store as the system of record, and put a
+relational projection in front of it.} The projection holds the indexes,
+the constraints and the joins the substrate cannot declare, and holds no
+authority: it derives from the vault, so if it is wrong, drop it and
+derive it again. Because a constraint cannot refuse a write it never
+sees, the write paths differ. \textbf{The agent writes through the
+projection}, where a bad write is refused before it reaches the vault,
+which is what makes rules 1 and 3 true rather than aspirational.
+\textbf{People still write straight to the vault}, so a human edit that
+breaks an invariant fails the next rebuild instead --- detection rather
+than prevention, on a schedule nobody forgets. \textbf{Every read goes to
+the projection}, where a join, an aggregate and a transitive closure are
+each one statement.
+
+Six rules follow. Each names the finding forcing it; F1 forces none,
+being the framing result rather than a defect.
+
+\begin{enumerate}
+  \item \textbf{Declare the key where the data is.} A unique index and
+        one \code{ON CONFLICT} statement close the window a
+        read-then-write upsert cannot; the same index on an alias stops
+        one real thing being introduced twice. \emph{(F3, F4, F6)}
+  \item \textbf{Put the join on the engine's side of the wire.} Move the
+        classes needing a join, an aggregate or a transitive closure ---
+        two thirds of this workload. \emph{(F2)}
+  \item \textbf{Give the fact table a temporal primary key.} An exclusion
+        constraint over a range type refuses the contradiction, leaving
+        the scan nothing to find \cite{sql2011}. \emph{(F4, F5)}
+  \item \textbf{Make every query name its axis.} Was the claim true on
+        day $D$, or did the store believe it on $D$? \emph{(F5)}
+  \item \textbf{Retire the restatements when you retire the fact.} Give
+        the extractor an explicit \code{UPDATE} and \code{DELETE}, as
+        Mem0 does \cite{mem0}. \emph{(F7)}
+  \item \textbf{Record what answered, and log what a cap dropped.} A
+        silent truncation reads as complete coverage. \emph{(F2b, F8)}
+\end{enumerate}
+
+\textbf{When, and with what caveat.} Not on day one, but where
+maintenance passes stop finishing inside a session or more than one agent
+writes one key. The measurements bound the shape of the cost rather than
+any team's wall-clock, coming from an emulator over a generated corpus
+\cite{loreStudy}. What they settle is firmer: a memory that arrives at
+triples with validity intervals, an entity registry, provenance edges and
+a confidence score has arrived at a database schema, and the only
+question left is which guarantees it does without, and what it does
+instead.
+
+%=====================================================================
+\section*{\sffamily\color{blue800}References}
+\addcontentsline{toc}{section}{References}
+
+Entries \textbf{[1]--[3]} are the three research papers added in this
+phase. Entries \textbf{[4]--[7]} are the subject system and the evidence
+base. Entries \textbf{[8]--[13]} support the argument and are also new to
+this report. No entry is carried over from Phase 1.
+
+% thebibliography opens with a \section*{\refname} of its own, and this
+% report has already set that heading. Swallow the duplicate: the two
+% arguments taken here are the star and the \refname group. Nothing after
+% the bibliography uses \section.
+\renewcommand{\section}[2]{}
+\begin{thebibliography}{99}
+% Ragged right here. Justifying a reference list forces a long URL to
+% break at a bad point rather than move whole to the next line.
+{\small\raggedright\setlength{\itemsep}{0.35\baselineskip}
+
+\bibitem{zep} P. Rasmussen, P. Paliychuk, T. Beauvais, J. Ryan and
+D. Chalef. ``Zep: A Temporal Knowledge Graph Architecture for Agent
+Memory.'' arXiv:2501.13956, 2025.
+\url{https://arxiv.org/abs/2501.13956}
+
+\bibitem{mem0} P. Chhikara, D. Khant, S. Aryan, T. Singh and D. Yadav.
+``Mem0: Building Production-Ready AI Agents with Scalable Long-Term
+Memory.'' \emph{ECAI 2025}, Frontiers in Artificial Intelligence and
+Applications, vol. 413, pp. 2993--3000, 2025; arXiv:2504.19413.
+\url{https://arxiv.org/abs/2504.19413}
+
+\bibitem{longmemeval} D. Wu, H. Wang, W. Yu, Y. Zhang, K.-W. Chang and
+D. Yu. ``LongMemEval: Benchmarking Chat Assistants on Long-Term
+Interactive Memory.'' \emph{ICLR 2025}; arXiv:2410.10813.
+\url{https://arxiv.org/abs/2410.10813}
+
+
+\bibitem{loreRepo} Notion Labs, Inc. (makenotion). ``Lore --- persistent,
+shared AI memory backed by Notion for MCP-compatible assistants.''
+GitHub, MIT licence, read at commit \code{95c3558}.
+\url{https://github.com/makenotion/lore}
+
+\bibitem{notionBlog} H. Salman. ``Building Shared Memory for AI Agents in
+Notion.'' Notion Blog, 18 August 2026.
+\href{https://www.notion.com/blog/building-shared-memory-for-ai-agents-in-notion}%
+{\nolinkurl{notion.com/blog/building-shared-memory-for-ai-agents-in-notion}}
+
+\bibitem{notionApi} Notion Labs, Inc. ``Request Limits'', ``Pagination''
+and ``Search by Title.'' Notion API Reference.
+\url{https://developers.notion.com/reference/request-limits}
+
+\bibitem{loreStudy} H. Khemani, K. Ahuja, M. Bassi and K. Agrawal.
+``Persistent Memory Architecture for Agents: A Review of Notion's Lore.''
+Review paper, measured 22 August 2026.
+\url{https://dbms-memory.khe.money}
+
+
+\bibitem{graphiti} Zep AI. ``Graphiti --- build temporal context graphs
+for AI agents.'' GitHub, Apache-2.0 licence.
+\url{https://github.com/getzep/graphiti}
+
+\bibitem{sql2011} K. Kulkarni and J.-E. Michels. ``Temporal Features in
+SQL:2011.'' \emph{ACM SIGMOD Record}, 41(3):34--43, 2012.
+
+\bibitem{gray1976} J. N. Gray, R. A. Lorie, G. R. Putzolu and
+I. L. Traiger. ``Granularity of Locks and Degrees of Consistency in a
+Shared Data Base.'' In \emph{Modelling in Data Base Management Systems},
+North Holland, 1976, pp. 365--394.
+
+\bibitem{swoosh} O. Benjelloun, H. Garcia-Molina, D. Menestrina, Q. Su,
+S. E. Whang and J. Widom. ``Swoosh: A Generic Approach to Entity
+Resolution.'' \emph{The VLDB Journal}, 18(1):255--276, 2009.
+
+\bibitem{amem} W. Xu, Z. Liang, K. Mei, H. Gao, J. Tan and Y. Zhang.
+``A-MEM: Agentic Memory for LLM Agents.'' arXiv:2502.12110, 2025.
+\url{https://arxiv.org/abs/2502.12110}
+
+\bibitem{du2025} Y. Du, W. Huang, D. Zheng, Z. Wang, S. Montella,
+M. Lapata, K.-F. Wong and J. Z. Pan. ``Rethinking Memory in AI: Taxonomy,
+Operations, Topics, and Future Directions.'' arXiv:2505.00675, 2025.
+\url{https://arxiv.org/abs/2505.00675}
+}
+\end{thebibliography}
+
+\vspace{1.2\baselineskip}
+{\color{blue200}\rule{\textwidth}{0.5pt}}\\[5pt]
+{\footnotesize\sffamily\color{grey600}
+\khe\ (241302081) \quad\textperiodcentered\quad Kush Ahuja
+\quad\textperiodcentered\quad Madhav Bassi \quad\textperiodcentered\quad
+Kushagra Agrawal\\[2pt]
+B.Tech CSE (AI/ML), Section C \quad\textperiodcentered\quad
+Department of Computer Science \& Engineering, SGT University\\[2pt]
+Phase 2 \quad\textperiodcentered\quad submitted 10 September 2026}
+
+\end{document}
