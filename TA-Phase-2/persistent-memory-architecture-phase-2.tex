@@ -60,8 +60,8 @@
   pdfauthor={Harshit Khemani (241302081), Kush Ahuja, Madhav Bassi,
              Kushagra Agrawal},
   pdfsubject={Database Management Systems --- Term Paper, Phase 2},
-  pdfkeywords={agent memory, DBMS, constraints, request amplification,
-               lost update, bitemporal, normalisation, PostgreSQL}
+  pdfkeywords={agent memory, data model, bitemporal, validity interval,
+               entity resolution, lost update, SQL:2011, benchmarks}
 }
 
 %---------------------------- colour --------------------------------
@@ -113,9 +113,9 @@
 \fancyhf{}
 \fancyhead[L]{\footnotesize\sffamily\color{grey600}%
   Persistent Memory Architecture \textperiodcentered\ Phase 2}
-\fancyhead[R]{\footnotesize\sffamily\color{grey600}%
-  Khemani \textperiodcentered\ Ahuja \textperiodcentered\ Bassi
-  \textperiodcentered\ Agrawal}
+% The authors are named on the cover page only, so the running head
+% carries the title alone.
+\fancyhead[R]{}
 \fancyfoot[C]{\footnotesize\sffamily\color{grey600}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 \renewcommand{\headrule}{\color{grey300}%
@@ -269,6 +269,7 @@
  Semester V \quad\textperiodcentered\quad Phase 2 of 2}
 \end{titlepage}
 
+
 %=====================================================================
 %  FRONT MATTER
 %=====================================================================
@@ -279,48 +280,46 @@
 \addcontentsline{toc}{section}{Abstract}
 
 Phase 1 of this term paper argued that the memory of an AI agent is a
-database, and it described how four deployed systems keep facts across a
-session boundary. Phase 2 tests that argument against measurement.
+database. Phase 2 tests that argument against the systems and the
+benchmarks the field has actually published.
 
-The subject of this phase is \textbf{Lore}, the open-source memory system
-that Notion released for MCP-compatible assistants \cite{loreRepo,
-notionBlog}. Lore is a good subject because it is honest about its own
-trade. It stores agent memory as rows in five Notion databases, so the
-memory stays readable by people and needs no server. In exchange it gives
-up every guarantee a database declares: no unique index, no foreign key,
-no check constraint, no atomic write across pages, no join, no aggregate
-and no conditional write.
+Four agent memory systems are read as data models: \textbf{MemGPT},
+which pages a memory hierarchy the way an operating system pages virtual
+memory \cite{memgpt}; \textbf{Zep}, which stores memory as edges of a
+temporal knowledge graph and invalidates an edge instead of deleting it
+\cite{zep,graphiti}; \textbf{Mem0}, which gives a writer four explicit
+operations over a memory store \cite{mem0}; and \textbf{A-MEM}, which
+argues that a fixed schema is itself the problem \cite{amem}. Two
+benchmarks supply the evidence about what fails: LongMemEval isolates
+five abilities of a long-term memory \cite{longmemeval}, and LoCoMo
+builds conversations of about 300 turns across as many as 35 sessions
+\cite{locomo}.
 
-This report compares that design against two relational engines that run
-the same schema, reports what the comparison found, and gives one
-recommendation. The evidence comes from our companion study, which
-reconstructed Lore's 80 properties from its source, generated a vault of
-11\,885 memories and 4\,277 facts with definitional ground truth, and ran
-a workload of 361 questions in ten classes through three stores
-\cite{loreStudy}.
+The comparison finds that three of the four have converged, from outside
+the database literature, on one shape: a subject--predicate--object
+triple carrying a validity interval, an entity registry that gives a
+thing one name, and a provenance edge back to the text that supported the
+claim. That is a database schema, and the questions the database
+community asked about it are fifty years old.
 
-The result is not that the document store gives wrong answers. It gives
-right ones. It answers 100.0\% of the workload exactly, and so does
-SQLite; PostgreSQL answers 99.2\%, and its three divergences are a
-stemming rule inside its text index rather than a fault. What separates
-the three is \emph{cost} and \emph{refusal}. The same 361 questions cost the
-Notion Data API 522\,686 requests against 361 SQL statements. Eight
-agents writing one key through a read-then-write protocol lose 87.1\% of
-their updates, and the same workload through a unique index loses none.
-PostgreSQL declines even to add a temporal exclusion constraint to the
-vault, because 70 subject--predicate pairs already contradict themselves.
+The findings are that structure pays and is measured to pay --- Mem0
+reports a 26\% relative improvement over a deployed baseline and more
+than 90\% fewer tokens than full context \cite{mem0}, and Zep reports up
+to 18.5\% higher accuracy with 90\% lower latency \cite{zep} --- but that
+three guarantees a database declares are still missing everywhere. No
+system declares uniqueness, so identity is decided by similarity rather
+than by key. No paper reports what happens when two writers touch one
+memory at once. And no system uses the temporal standard that has existed
+since SQL:2011, although two of them implement its idea by hand.
 
-The recommendation follows from those numbers, and it is not
-``use PostgreSQL''. It is to keep the legible store as the system of
-record and to add a rebuildable relational projection beside it, which
-carries the indexes, the constraints and the joins the legible store
-cannot declare.
+The recommendation follows from those gaps: declare the schema where the
+data is, give the fact relation a temporal key, and make the update an
+operation the writer names rather than a side effect of a write.
 
 \vspace{0.4\baselineskip}
 \eyebrow{Keywords}\\[2pt]
-agent memory, request amplification, lost update, referential integrity,
-bitemporal data, exclusion constraint, normalisation, entity resolution,
-PostgreSQL, SQLite.
+agent memory, data model, bitemporal data, validity interval, entity
+resolution, lost update, SQL:2011, benchmark comparability.
 
 \clearpage
 
@@ -328,13 +327,12 @@ PostgreSQL, SQLite.
 \colorbox{clay100}{\parbox{\dimexpr\textwidth-18pt\relax}{\small
 \eyebrow{What this report does not repeat}\\[3pt]
 This is a standalone Phase 2 report. No section, table, figure or
-argument from the Phase 1 report appears here. Phase 1 covered the four
-storage layers, the PostgreSQL schema, the record and recall paths, and
-four case studies. This phase covers only the three criteria set for it:
-\textbf{comparison}, \textbf{findings} and \textbf{recommendation}. It
-takes a new subject system, a new evidence base, and a bibliography that
-shares no research paper with Phase 1. Where a Phase 1 conclusion is
-needed, it is named in one sentence, never reproduced.}}}
+argument from the Phase 1 report appears here, and this phase does not
+carry over any earlier write-up of its own. It covers only the three
+criteria set for it: \textbf{comparison}, \textbf{findings} and
+\textbf{recommendation}. Every quantitative claim below is a figure a
+published, peer-reviewable paper reports about itself, cited at the point
+of use, so a reader can check each one at its source.}}}
 
 \vspace{0.6\baselineskip}
 
@@ -342,10 +340,8 @@ needed, it is named in one sentence, never reproduced.}}}
 \addcontentsline{toc}{section}{New Research Added in This Phase}
 
 The brief for this phase asks for three more research papers. The three
-below are new to this report, none of them appears in Phase 1, and each
-does real work in the sections that follow rather than sitting in the
-list. Table~\ref{tab:new} names what each one contributes and where it is
-used.
+below are new to this report, and each does real work in the sections
+that follow rather than sitting in the list.
 
 \begin{table}[!htbp]
 \centering
@@ -361,38 +357,38 @@ one does.}
 \midrule
 \textbf{Zep}, a temporal knowledge graph for agent memory
 \cite{zep,graphiti} &
-Zep attaches a validity interval to every subject--predicate--object
-edge and invalidates an old edge instead of deleting it. It is the
-sharpest prior art for Lore's Facts relation, so it fixes the axis on
-which the comparison of data models is fair. &
-\S\ref{sec:cmp}, \S\ref{sec:f5} \\
+Zep attaches a validity interval to every edge and invalidates an old
+edge instead of deleting it, which is the bitemporal idea arriving in
+agent memory. It also supplies the only head-to-head accuracy figure in
+this report. &
+\S\ref{sec:cmp}, \S\ref{sec:f2}, \S\ref{sec:f5} \\
 \textbf{Mem0}, scalable long-term memory with explicit operations
 \cite{mem0} &
 Mem0 gives memory a small data manipulation language: the extractor
 decides \code{ADD}, \code{UPDATE}, \code{DELETE} or \code{NOOP} for every
 candidate. That names the axis Phase 1 left open, which is who owns the
-update and where it is applied. &
-\S\ref{sec:cmp}, \S\ref{sec:f7} \\
+update. &
+\S\ref{sec:cmp}, \S\ref{sec:f2}, \S\ref{sec:f4} \\
 \textbf{LongMemEval}, a benchmark for long-term interactive memory
 \cite{longmemeval} &
 It isolates five abilities of a long-term memory, two of which ---
 temporal reasoning and knowledge updates --- are exactly the two a
-validity interval exists to serve, and it measures about a 30\% accuracy
-drop for commercial assistants across sustained interactions. That ties
-the validity interval to abilities a benchmark treats as core. &
-\S\ref{sec:cmp}, \S\ref{sec:f5} \\
+validity interval exists to serve, and measures about a 30\% accuracy
+drop for commercial assistants. &
+\S\ref{sec:cmp}, \S\ref{sec:f3} \\
 \bottomrule
 \end{tabularx}}
 \end{table}
 
-Six further sources are also new to this report. Five support the
-argument at specific points: Graphiti, the engine behind Zep
-\cite{graphiti}, the SQL:2011 temporal standard \cite{sql2011}, Gray's
-account of the lost update \cite{gray1976}, Swoosh on entity resolution
-\cite{swoosh}, and a recent survey that maps the operations of an agent
-memory onto the operations of a database \cite{du2025}. The sixth,
-A-MEM \cite{amem}, states the opposing position on whether a memory
-should have a schema at all.
+Five further sources are also new to this report. MemGPT \cite{memgpt}
+and LoCoMo \cite{locomo} complete the comparison and the benchmark
+evidence; the SQL:2011 temporal standard \cite{sql2011}, Gray's account
+of the lost update \cite{gray1976} and Swoosh on entity resolution
+\cite{swoosh} supply the database results that the findings measure the
+systems against. A-MEM \cite{amem} states the opposing position on
+whether an agent memory should have a schema at all, and a recent survey
+\cite{du2025} supplies the vocabulary that maps memory operations onto
+database operations.
 
 \clearpage
 {\sffamily\setlength{\parskip}{0pt}%
@@ -413,140 +409,137 @@ should have a schema at all.
 
 Phase 1 asked how an agent memory carries a fact across a session
 boundary. That separates designs but does not price them. This phase asks
-a narrower question with a harder answer. \emph{One schema, three stores:
-what does each cost, and what will each refuse?}
+a narrower question with a harder answer. \emph{Read four published
+systems as data models: what has each one declared, and what can each one
+refuse?}
 
-\subsection{The subject, and where the numbers come from}
+\subsection{The four systems, and why these four}
 
-Lore is Notion's open-source memory system for MCP-compatible assistants
-\cite{loreRepo,notionBlog}. A vault is one Notion page holding five
-databases --- Projects, Topics, Memories, Entities and Facts --- all
-reached through the Notion Data API. That API is the whole design: at
-most 100 rows per request, 3 requests per second, and no join, no
-aggregate, no unique index, no check constraint and no conditional write
-\cite{notionApi}.
+The four are chosen because each takes a different position on the one
+question this topic turns on, which is how much structure the memory
+should declare in advance.
 
-Every number here comes from our companion study \cite{loreStudy}, which
-reconstructed Lore's 80 properties from \code{src/notion/schema.ts} at
-commit \code{95c3558} and re-implemented the schema on SQLite and on
-PostgreSQL. Its corpus is generated world-first, so every correct answer
-is definitional: 11\,885 memories, 4\,277 facts of which 1\,196 are
-closed, 1\,096 entities carrying 1\,153 aliases. A workload of 361
-questions in ten classes then runs through three arms: an emulator
-restricted to the documented Data API, and the two engines.
+\textbf{MemGPT} takes the operating-system position. It treats the
+context window as physical memory and everything else as disk, and it
+moves data between the two tiers, ``inspired by hierarchical memory
+systems in traditional operating systems that provide the appearance of
+large memory resources through data movement between fast and slow
+memory'' \cite{memgpt}. The model itself issues the paging calls. There
+is no schema, because paging does not need one.
 
-\subsection{Three agent memories, compared as data models}
+\textbf{Zep} takes the temporal-database position. Memory is a graph of
+entity nodes joined by edges, and every edge carries both when the fact
+was true and when the graph came to believe it, so a contradicted edge is
+invalidated rather than removed \cite{zep,graphiti}.
 
-A comparison needs a fair axis, and the three new papers supply it. Zep
-attaches a validity interval to every edge of a temporal knowledge graph,
-so an old claim is invalidated and not deleted \cite{zep,graphiti}. Mem0
-gives the writer explicit operations, so a candidate becomes an
-\code{ADD}, an \code{UPDATE}, a \code{DELETE} or a \code{NOOP}
-\cite{mem0}. Lore sits between them, and Table~\ref{tab:designs} sets the
-three side by side.
+\textbf{Mem0} takes the data-manipulation position. Extraction proposes
+candidate memories, and the update phase resolves each candidate into one
+of four operations --- \code{ADD}, \code{UPDATE}, \code{DELETE} or
+\code{NOOP} --- against what is already stored \cite{mem0}.
+
+\textbf{A-MEM} takes the opposing position, and the comparison is weaker
+without it. It argues that existing systems ``rely on fixed schemas or
+operation structures'' and that this limits adaptation to new tasks,
+proposing instead notes that link themselves into a network which emerges
+from content rather than from a declared shape \cite{amem}.
 
 \begin{table}[!htbp]
 \centering
-\caption[Three memory designs]{Three agent memory designs as data models. The last row is the one
-the rest of this report measures.}
+\caption[Four memory designs]{Four agent memory designs, read as data models. The last row is
+the one \S\ref{sec:findings} measures.}
 \label{tab:designs}
 {\scriptsize
 \renewcommand{\arraystretch}{1.25}
-\begin{tabularx}{\textwidth}{L{2.25cm} Y Y Y}
+\begin{tabularx}{\textwidth}{L{2.05cm} Y Y Y Y}
 \toprule
- & \sffamily\bfseries Lore \cite{loreRepo} &
-   \sffamily\bfseries Zep and Graphiti \cite{zep,graphiti} &
-   \sffamily\bfseries \lnum{Mem0} \cite{mem0} \\
+ & \sffamily\bfseries MemGPT \cite{memgpt} &
+   \sffamily\bfseries Zep \cite{zep} &
+   \sffamily\bfseries \lnum{Mem0} \cite{mem0} &
+   \sffamily\bfseries A-MEM \cite{amem} \\
 \midrule
+Unit of memory &
+A block of context, paged in and out &
+An edge between two entity nodes &
+A natural-language memory item &
+An atomic note that links itself \\
+
+Schema &
+None. A memory hierarchy, not a relation &
+Declared: nodes, edges, intervals &
+Light, plus a graph variant &
+Rejected by design \\
+
 Temporal model &
-Bitemporal. Valid From, Valid Until, Observed At, Invalidated At &
-Bitemporal. An edge records when it was true and when the graph learned
-it &
-Timestamps on the item. No validity interval \\
+None &
+Bitemporal: true-when and believed-when &
+Timestamps, no validity interval &
+None declared \\
 
-How an update happens &
-The client reads, decides, then writes. Two requests, and a window
-between them &
-The engine closes the old edge and adds the new one &
-An explicit operation chosen at write time: \code{ADD}, \code{UPDATE},
-\code{DELETE} or \code{NOOP} \\
+Who owns the update &
+The model, by issuing a paging call &
+The engine, by invalidating the old edge &
+The writer, by naming one of four operations &
+The network, by re-linking notes \\
+
+Identity of a thing &
+Whatever is in context &
+An entity node &
+By similarity &
+Emergent from links \\
 
 \midrule
-\sffamily\bfseries The store can refuse a bad write &
-\sffamily\bfseries No. Uniqueness is a convention in the client &
-\sffamily\bfseries Yes, for what the engine declares &
-\sffamily\bfseries Only as far as the writer decides \\
+\sffamily\bfseries Can the store refuse a bad write? &
+\sffamily\bfseries No &
+\sffamily\bfseries For what the engine declares &
+\sffamily\bfseries Only as far as the writer decides &
+\sffamily\bfseries No, by design \\
 \bottomrule
 \end{tabularx}}
 \end{table}
 
-One row is missing on purpose: only Lore is readable and correctable by a
-person without a client, the trade \S\ref{sec:rec} defends. A-MEM argues
-the opposite case to all three, that a fixed schema limits cross-task
-adaptability \cite{amem}; this phase does not settle that, but none of
-the failures in \S\ref{sec:findings} follows from having a schema. Each
-follows from a store that cannot enforce one. LongMemEval justifies the
-temporal row: two of the five abilities it isolates, temporal reasoning
-and knowledge updates, are exactly the two a validity interval exists to
-serve \cite{longmemeval}.
+\subsection{The same four operations, under two vocabularies}
 
-\subsection{One schema, three stores}
-
-Table~\ref{tab:arms} is the centre of this comparison: the same schema,
-the same 361 questions, three stores.
+The surveys of this field decompose a memory into six operations, and
+every one of the six already has a database name \cite{du2025}.
+Table~\ref{tab:ops} is that translation, and it is the reason a database
+course has anything to say here at all.
 
 \begin{table}[!htbp]
 \centering
-\caption[The three arms]{The three arms on one workload of 361 questions. Requests and
-client-side rows are means for one question. The rate-limit floor applies
-Notion's documented 3 requests per second to the whole workload; it is a
-lower bound on wall-clock, not a measurement of it, and no rate limit
-applies to a local engine. The PostgreSQL arm is PGlite, the same source
-tree and planner compiled to WebAssembly, so no throughput claim is made
-for it.}
-\label{tab:arms}
+\caption[Two vocabularies]{What the agent-memory literature calls an operation, and what the
+database literature has called the same operation for decades.}
+\label{tab:ops}
 {\footnotesize
-\renewcommand{\arraystretch}{1.28}
-\begin{tabularx}{\textwidth}{X R{2.3cm} R{1.7cm} R{2.0cm}}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{L{3.1cm} Y}
 \toprule
-\sffamily\bfseries Measure &
-\sffamily\bfseries Lore on Notion &
-\sffamily\bfseries SQLite &
-\sffamily\bfseries PostgreSQL \\
+\sffamily\bfseries In agent memory & \sffamily\bfseries In a database \\
 \midrule
-Exact-answer rate                   & 100.0\%   & 100.0\% & 99.2\% \\
-\midrule
-Requests, one question              & 1\,447.9  & 1.0     & 1.0 \\
-Requests, whole workload            & 522\,686  & 361     & 361 \\
-Rate-limit floor, whole workload    & 48.4\,h   & ---     & --- \\
-\midrule
-Share of the workload it can state  & 33.2\%    & 100\%   & 100\% \\
-Invariants with no declarative form & 4 of 7    & 1 of 7  & 0 of 7 \\
+Consolidation & Materialising a derived relation \\
+Updating      & The update anomaly, and the operation that avoids it \\
+Indexing      & Indexing \\
+Forgetting    & A retention policy \\
+Retrieval     & Query processing \\
+Compression   & A summary held as a materialised view \\
 \bottomrule
 \end{tabularx}}
 \end{table}
 
-The last two rows need a note. The first counts what the store can
-\emph{express}: 44.6\% of the questions need a join, 11.4\% an aggregate
-and 11.1\% a transitive closure, so 66.8\% of the workload needs
-something the Data API cannot state as a filter. The second counts what
-it can \emph{refuse}: four of the seven invariants have no declarative
-form on Notion and three of those are guarded by nothing at all, while
-SQLite declares six, failing only on the temporal one for want of an
-exclusion constraint, and PostgreSQL declares all seven.
-Figure~\ref{fig:amp} in \S\ref{sec:f2} draws the uneven distribution
-behind the 1\,447.9 mean.
+\subsection{What the comparison separates}
 
-So the comparison does not separate the three on correctness. It
-separates them on cost, as a multiplier rather than a constant, and on
-refusal, which is categorical: a database's central service is not
-answering a question but declining to enter a state that makes a future
-answer wrong.
+It does not separate them on ambition: all four are trying to make an
+agent remember across sessions, and all four report progress at it. It
+separates them on \emph{what the store is allowed to promise}.
 
-%% The brief sets a page budget for each of the three criteria, so
-%% each one starts on a fresh page and its span is countable.
-\clearpage
+Read down the last row of Table~\ref{tab:designs}. Only one of the four
+can refuse a write, and only for the part it has declared. In every other
+column the guarantee is a convention held by the program that writes,
+which means it holds exactly as long as every writer is well behaved.
+That is the axis \S\ref{sec:findings} measures, and it is the axis on
+which fifty years of database results have something to say.
+
 %=====================================================================
+\clearpage
 \section{Findings}
 \label{sec:findings}
 %=====================================================================
@@ -554,310 +547,320 @@ answer wrong.
 Most of the findings below carry the name of an older database
 phenomenon, because that is what they turn out to be.
 
-\finding{F1} One result frames the rest. \textbf{Correctness is not where
-these designs differ}, so nothing below is about a wrong answer. All
-three stores return the exactly-correct set, and PostgreSQL's 99.2\% is
-the stemming rule of \S\ref{sec:f8}, not a fault. Everything below is
-about what the right answer costs and about what the store will not stop.
+\subsection{Three of the four converged on one schema}
+\label{sec:f1}
 
-\subsection{A missing join costs a multiplier, not a constant}
+\finding{F1} Zep, Mem0's graph variant and the wider family all arrive at
+the same three parts, independently and from outside the database
+literature: a triple of subject, predicate and object; an interval saying
+when that triple was true; and an edge back to the text that supported
+it. Zep states the temporal half explicitly, giving each edge both the
+interval over which the fact held and the interval over which the graph
+believed it \cite{zep}.
+
+That is a schema, and naming it as one is the whole contribution of
+reading these systems as data models. A relation with a compound key, a
+validity interval and a provenance foreign key is not a new object. It is
+the object Codd's successors spent the 1990s formalising, and the
+questions that follow --- what is the key, what refuses a duplicate, what
+happens when two intervals overlap --- are already answered.
+
+The convergence is partial, and Table~\ref{tab:parts} is careful about
+where. Only Zep holds all four parts; Mem0 reaches the first and the
+last; and the two systems that declare no schema hold none of them, which
+is consistent rather than careless, because neither is trying to.
+
+\begin{table}[!htbp]
+\centering
+\caption[Which parts each system holds]{Which parts of that schema each system holds. A dash means the
+system does not have the part, not that it fails at it: MemGPT and A-MEM
+are not trying to declare a schema.}
+\label{tab:parts}
+{\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{Y L{1.65cm} L{1.5cm} L{1.5cm} L{1.5cm}}
+\toprule
+\sffamily\bfseries Part of the schema &
+\sffamily\bfseries MemGPT & \sffamily\bfseries Zep &
+\sffamily\bfseries \lnum{Mem0} & \sffamily\bfseries A-MEM \\
+\midrule
+A triple joining two entities & --- & yes & graph variant & --- \\
+When the fact was true        & --- & yes & --- & --- \\
+When the store believed it    & --- & yes & --- & --- \\
+One canonical name for a thing & --- & entity node & by similarity & emergent \\
+\bottomrule
+\end{tabularx}}
+\end{table}
+
+\subsection{Structure is measured to pay, and each paper measures it differently}
 \label{sec:f2}
 
-\finding{F2} Provenance is the cheapest join an agent memory can be asked
-for: a claim, the memory it came from, and that memory's author. In SQL
-it is one statement. The Data API cannot filter one database by a
-property of the page a relation points at, so the client pages over Facts
-in 12 requests, reads 1\,126 memory pages one at a time and filters
-itself --- 1\,137.75 round trips and 1\,126.2 client-side rows against
-one and none, a floor of 6.3 minutes for one question.
+\finding{F2} The case for structuring memory is not rhetorical. Both
+structured systems report gains against real baselines, and
+Table~\ref{tab:results} collects what each one claims.
 
-Searching what the memories \emph{say} is worse. Property filters cannot
-see page blocks and the search endpoint matches titles \cite{notionApi},
-so a complete search is one list request per hundred rows plus one per
-row: 11\,892 requests, 66.1 minutes here, 11.0 hours ten times larger,
-110.1 hours a hundred times larger.
+\begin{table}[!htbp]
+\centering
+\caption[What each paper reports]{What each paper reports about itself. The right-hand column is the
+finding: no two rows share a benchmark and a baseline, so these numbers
+rank nothing against each other.}
+\label{tab:results}
+{\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\textwidth}{L{1.5cm} Y L{2.5cm}}
+\toprule
+\sffamily\bfseries System & \sffamily\bfseries Reported result &
+\sffamily\bfseries Measured on \\
+\midrule
+\lnum{Mem0} \cite{mem0} &
+26\% relative improvement in the LLM-as-a-judge metric over a deployed
+memory baseline; 91\% lower p95 latency and over 90\% token saving
+against full context &
+LOCOMO \\
+Zep \cite{zep} &
+94.8\% against 93.4\% for MemGPT; and separately, up to 18.5\% higher
+accuracy with 90\% lower latency against baseline implementations &
+DMR, then LongMemEval \\
+\bottomrule
+\end{tabularx}}
+\end{table}
 
-That figure carries the study's own biggest caveat: it measures what the
-\emph{documented} API permits, and Lore delegates ranking to a Notion
-endpoint the study could not measure, so Lore is cheaper here
-\cite{loreStudy}. The structural point survives --- Lore owns no index,
-so its retrieval depends on an endpoint it does not control.
+Two things follow, and they pull in opposite directions. The first is
+that the structured designs are not paying for their structure in speed:
+both report large latency and token reductions, because a memory that
+retrieves a few relevant rows sends less to the model than one that
+resends the conversation. The second is \S\ref{sec:f8}.
+
+\subsection{The measured failures are the ones a validity interval addresses}
+\label{sec:f3}
+
+\finding{F3} LongMemEval isolates five abilities of a long-term memory,
+two of which --- temporal reasoning and knowledge updates --- are exactly
+the two a validity interval exists to serve, and it measures about a 30\%
+accuracy drop for commercial assistants across sustained interactions
+\cite{longmemeval}.
+
+LoCoMo reaches the same place from a different direction. Its
+conversations run to roughly 300 turns and as many as 35 sessions, and it
+finds that models ``exhibit challenges in understanding lengthy
+conversations and comprehending long-range temporal and causal dynamics
+within dialogues'', still lagging human performance substantially even
+when given long context or retrieval \cite{locomo}.
+
+Neither benchmark was built to argue for a schema. Both nevertheless
+locate the difficulty in the part of memory that changes over time, which
+is the part a temporal relation is for.
+
+\subsection{The systems disagree about who owns the update}
+\label{sec:f4}
+
+\finding{F4} This is the update anomaly, and the four systems answer it
+in four different places. MemGPT gives the decision to the model, which
+issues the call that moves data between tiers \cite{memgpt}. Zep gives it
+to the engine, which closes the old edge when a new one contradicts it
+\cite{zep}. Mem0 gives it to the writer, which must resolve every
+candidate into \code{ADD}, \code{UPDATE}, \code{DELETE} or \code{NOOP}
+\cite{mem0}. A-MEM gives it to the network, which re-links notes as they
+arrive \cite{amem}.
+
+Only Mem0's answer is a data manipulation language in the ordinary sense:
+a closed set of operations, each with a defined effect, chosen at the
+point of writing. The other three infer the operation from context, which
+is exactly the design a declared \code{UPDATE} was invented to replace.
+
+\subsection{Identity is decided by similarity, not by key}
+\label{sec:f5}
+
+\finding{F5} A memory has to decide when two mentions are the same thing.
+Zep resolves this with an entity node, Mem0 by similarity, A-MEM by
+emergent linking, MemGPT not at all. None of the four declares
+uniqueness, and a store with no unique index cannot refuse the second
+introduction of a thing it already holds.
+
+This has a theory, and the theory is older than the problem. Swoosh
+formalises match and merge as generic operators and defines the
+transitive closure a resolution has to reach before it is finished
+\cite{swoosh}: if $A$ merges with $B$ and $B$ with $C$, the result is not
+settled until $A$, $B$ and $C$ are one. A pairwise similarity test does
+not reach that closure by itself, so duplicate identities survive in
+exactly the systems that resolve identity by similarity.
+
+\subsection{Nobody reports what two writers do to one memory}
+\label{sec:f6}
+
+\finding{F6} Every one of the four papers evaluates a single writer. None
+of them reports a concurrent-write experiment, and none declares an
+isolation level.
+
+This matters because agent memory is now shared by construction: a team
+of agents, or a team of people and their agents, writes to one store. The
+failure that follows is the oldest one in the transaction literature.
+Gray's account sets out the lost update and the degrees of consistency
+that permit it \cite{gray1976}: two writers read the same value, each
+computes a new one from what it read, and the second write erases the
+first.
+
+Every design in Table~\ref{tab:designs} has that shape, because every one
+of them updates by reading first. Mem0 must retrieve the existing
+memories before it can decide whether a candidate is an \code{ADD} or an
+\code{UPDATE} \cite{mem0}; Zep must find the edge a new fact contradicts
+before it can invalidate it \cite{zep}; A-MEM's evolution step revises
+the notes a new note links to, so its exposure grows with the linking
+\cite{amem}. In each case the decision is computed from a value read a
+moment earlier, and nothing in the write says what that value was.
+
+The database answer is one line: make the write conditional on the state
+the reader saw, against a key the store has declared. That is what an
+\code{ON CONFLICT} clause or a compare-and-set against a version does,
+and it turns a lost update into a refused write the caller can retry.
+None of the four is documented as having one, and until a paper measures
+two writers on one memory, nobody knows the size of the problem.
+
+\subsection{The temporal standard already exists and none of them uses it}
+\label{sec:f7}
+
+\finding{F7} Zep implements two time axes by hand \cite{zep}. SQL:2011
+standardised the same separation more than a decade earlier, as
+application-time period tables for when a row is true in the world and
+system-versioned tables for when the database held it, with period-scoped
+\code{UPDATE} and \code{DELETE} and automatic history rows
+\cite{sql2011}.
+
+The gap is not that the agent-memory systems are wrong. It is that they
+are re-deriving a solved problem, and paying for it in the usual way: a
+hand-built temporal column has no period-scoped update, no automatic
+history, and no way for the engine to refuse two intervals that overlap
+when they should not. Figure~\ref{fig:gap} puts that gap, and the two
+from \S\ref{sec:f5} and \S\ref{sec:f6}, on one axis.
 
 \begin{figure}[!htbp]
 \centering
 \resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[x=1cm,y=1cm]
-% Decade gridlines at 2.5 cm per decade: 1, 10, 100, 1000, 10000.
-% 2.9 cm to the decade. Bar length is log10(value) times that, so the
-% 1.0x class has no bar and 11 892x runs just past the last gridline.
-\foreach \gx/\glab in {0/1,2.9/10,5.8/100,8.7/1000,11.6/10\,000}{
-  \draw[gridline] (\gx,-0.14) -- (\gx,3.14);
+% 1976 to 2026 mapped onto 10 cm, so 0.2 cm to the year. The year each
+% result was settled sets the left end of its bar; the year a system in
+% this comparison acted on it sets the right end.
+\foreach \tx/\tl in {0/1976,2.8/1990,4.8/2000,6.8/2010,8.8/2020}{
+  \draw[gridline] (\tx,-0.62) -- (\tx,2.62);
   \node[font=\sffamily\scriptsize,text=grey600,anchor=north]
-    at (\gx,-0.18) {\glab$\times$};
+    at (\tx,-0.66) {\tl};
 }
-\foreach \nm/\ln/\vl/\yy/\st in {%
-  body-search/11.818/11\,892$\times$/2.92/barc,
-  provenance/8.863/1\,138$\times$/2.62/barc,
-  conflict-scan/4.197/28.0$\times$/2.32/bar,
-  cross-db/3.840/21.1$\times$/2.02/bar,
-  supersession/1.624/3.6$\times$/1.72/bar,
-  ask-entity/1.384/3.0$\times$/1.42/bar,
-  as-of/1.384/3.0$\times$/1.12/bar,
-  current/1.384/3.0$\times$/0.82/bar,
-  aggregate/0.873/2.0$\times$/0.52/bar,
-  wake-up/0/1.0$\times$/0.22/bar}{
-  \node[barl] at (-0.22,\yy) {\nm};
-  \fill[\st] (0,\yy-0.085) rectangle (\ln,\yy+0.085);
-  \node[barv] at (\ln+0.14,\yy) {\vl};
+\foreach \nm/\yy in {%
+  {A conditional write, against the lost update}/2.1,
+  {Entity resolution carried to closure}/1.05,
+  {Valid time separated from transaction time}/0.0}{
+  \node[font=\sffamily\scriptsize,text=ink,anchor=east] at (-0.35,\yy) {\nm};
 }
+\fill[barc] (0,2.02) rectangle (10.0,2.18);
+\fill[bar]  (6.6,0.97) rectangle (9.8,1.13);
+\fill[bar]  (7.2,-0.08) rectangle (9.8,0.08);
+% The opening label sits above its bar and the closing label below it, so
+% the two never meet on the short bars.
+\foreach \px/\py/\pl in {0/2.1/{Gray 1976}, 6.6/1.05/{Swoosh 2009},
+                         7.2/0.0/{SQL:2011}}{
+  \node[font=\sffamily\scriptsize,text=ink,anchor=south west]
+    at (\px,\py+0.11) {\pl};
+}
+\node[font=\sffamily\scriptsize,text=clay700,anchor=north east]
+  at (10.0,1.91) {still open};
+\node[font=\sffamily\scriptsize,text=blue600,anchor=north east]
+  at (9.8,0.86) {by similarity, 2025};
+\node[font=\sffamily\scriptsize,text=blue600,anchor=north east]
+  at (9.8,-0.19) {Zep, by hand, 2025};
+\draw[gridline] (-0.15,-0.62) -- (10.15,-0.62);
 \end{tikzpicture}}
-\caption[Request amplification by question class]{Request amplification by question class: the mean number of Data
-API requests that one question costs, against the single SQL statement
-which answers it. The axis is logarithmic and evenly spaced by decade, so
-\code{wake-up} at $1\times$ has no bar to draw. The two clay bars are the
-two classes that pass a thousand requests for one question, and both are
-searches the store cannot push down.}
-\label{fig:amp}
+\caption[Three results, and when agent memory reached them]{Three database results, and when the agent-memory literature
+reached them. Each bar runs from the year the database community settled
+the question to the year a system in this comparison acted on it. The
+clay bar is still open: no paper in \S\ref{sec:cmp} reports a
+concurrent-writer result at all.}
+\label{fig:gap}
 \end{figure}
 
-\finding{F2b} The prompt is bounded and the work behind it is not. The
-wake-up hook caps its payload at 20 memories and 30 facts, and the cap
-holds: over an eight-fold growth of the vault it still costs 24 requests
-and injects between 775 and 852 tokens. What grows is the class of
-operation touching every row --- the conflict scan, the debt sweep, the
-aggregate, the complete search --- which a rate limit turns into hours.
-Lore's own caps cluster there.
-
-\subsection{A read-then-write upsert loses most of its writes}
-\label{sec:f3}
-
-\finding{F3} Lore upserts a topic-keyed memory by reading the vault for a
-matching row and then creating or patching. The API documents no
-conditional write --- no ETag, no \code{If-Match}, no version token
-\cite{notionApi} --- so the window between read and write cannot be
-closed from the client, and Lore's own source says so. The study ran the
-interleave explicitly rather than leaving it to a scheduler: every writer
-reads before any writer writes, the worst schedule the protocol admits
-and the one the API gives no way to exclude. With 8 writers over 200
-rounds the read-then-write path lost 1\,393 of 1\,600 updates, 87.1\%,
-and left 7 duplicate rows for a key that should hold one. The same
-workload through \code{INSERT \ldots ON CONFLICT} lost none.
-
-The loss grows with contention. A shallower sweep at 2, 4, 8 and 16
-writers lost 49.0\%, 73.5\%, 85.8\% and 91.9\%, against 0.0\% at every
-width through the unique index. This is Gray's lost update
-\cite{gray1976} by a new route: the anomaly needs no weak isolation level
-when the protocol has no conditional write to close on.
-
-\subsection{A constraint the store cannot declare is a state it cannot refuse}
-\label{sec:f4}
-
-\finding{F4} The study took seven invariants from the schema and wrote
-the one line of standard DDL that would enforce each
-(Table~\ref{tab:inv}). Four have no declarative form on the substrate at
-all, and three of those are guarded by nothing whatsoever.
-
-\begin{table}[!htbp]
-\centering
-\caption[The seven invariants]{Seven invariants the schema implies, the declaration that would
-enforce each, and what walks through it today.}
-\label{tab:inv}
-{\scriptsize
-\renewcommand{\arraystretch}{1.1}
-\begin{tabularx}{\textwidth}{L{0.85cm} X L{3.05cm} L{2.5cm}}
-\toprule
-& \sffamily\bfseries Invariant & \sffamily\bfseries Declarative form &
-  \sffamily\bfseries In the vault \\
-\midrule
-INV-1 & At most one memory for one topic key &
-  \ddl{UNIQUE (topic\_key,\\ project\_id)} & Client code \\
-INV-2 & Every fact points at a memory that exists &
-  \ddl{FOREIGN KEY ...\\ ON DELETE RESTRICT} & \bfseries Nothing \\
-INV-3 & One object per functional predicate at any instant &
-  \ddl{EXCLUDE USING gist\\ (... WITH \&\&)} & \bfseries Nothing \\
-INV-4 & Confidence is one of three values &
-  \ddl{CHECK (confidence\\ IN ...)} & Editable options \\
-INV-5 & An alias names exactly one entity &
-  \ddl{UNIQUE (alias)} & \bfseries Nothing \\
-INV-6 & Valid from is not after valid until &
-  \ddl{CHECK (... <= ...)} & Not verifiable \\
-INV-7 & The dedup key is the hash of its own columns &
-  \ddl{GENERATED ALWAYS\\ AS (...)} & Write-time code \\
-\bottomrule
-\end{tabularx}}
-\end{table}
-
-Three were attacked. INV-1 is F3 above; in the other two the vault
-refused nothing at all. Over 2\,724 facts on functional predicates,
-PostgreSQL under a temporal exclusion constraint accepted 2\,532 and
-refused 192, and the vault refused 0. When 112 memories were archived
-after facts already cited them, \code{ON DELETE RESTRICT} refused all 112
-and left no orphan; the vault accepted all 112 and left 112 claims whose
-provenance it can no longer return. The exclusion result has a sharper
-first half: the constraint could not be added to the vault \emph{as
-generated} at all, because 70 subject--predicate pairs already assert two
-objects over overlapping time.
-
-Lore is not unaware of contradictions --- it ships a scanner, capped at
-500 candidates for each project. The comparison is between preventing a
-state and detecting it afterwards at quadratic cost under a cap.
-Detection is useful, and it is not the same thing.
-
-\subsection{Two time axes disagree often enough to be a correctness decision}
-\label{sec:f5}
-
-\finding{F5} A bitemporal schema is only worth its columns if the two
-axes ever disagree. Here they disagree constantly. A retraction lags the
-world by a median of 23 days and a 95th percentile of 43, and of the
-1\,196 facts whose validity has closed, 1\,172 --- 98.0\% --- were
-retracted only after the claim had stopped being true. A fact disagrees
-on day $D$ when ``was this true on $D$'' and ``did the vault believe it
-on $D$'' give different answers; across all 4\,277 facts, 245 disagree on
-day 120 (5.7\%), 123 on day 240 (2.9\%), 112 on day 360 (2.6\%) and 55 on
-day 480 (1.3\%).
-
-Lore and Zep both hold the two axes \cite{loreRepo,zep}, and SQL:2011
-standardised the separation more than a decade before either
-\cite{sql2011}. LongMemEval measures what getting it wrong costs:
-assistants lose about 30\% of their accuracy across sustained
-interactions \cite{longmemeval}. A query that does not name its axis is a
-correctness error waiting for a probe day.
-
-\subsection{The normalisation violations that ship are substrate costs}
-\label{sec:f6}
-
-\finding{F6} The usual exercise walks a badly shaped relation up to
-Boyce--Codd form. The interesting exercise here is the other one: which
-violations \emph{ship}, and why. Five rungs of a six-rung ladder are
-still in the released product, and none is an oversight. Aliases are a
-comma-joined list in one text cell, so no predicate can ask which entity
-owns an alias; a multi-select would force a schema migration for every
-new alias. Two derived columns stand in for one expression index, because
-the store has none. And the centre of the knowledge graph carries a
-Boyce--Codd violation that is structural rather than careless: every
-Notion database needs exactly one title property, a title cannot be a
-relation, so a fact holds its subject twice.
-
-That violation is reachable by the most ordinary maintenance the system
-has. The merge routine repoints every fact relation from loser to winner
-and never rewrites the title, and the vault was generated to hold what
-that leaves behind: 105 facts, 2.5\% of all, whose title says one name
-and whose relation points at another. Entity resolution has an older
-theory --- Swoosh defines the transitive closure a resolution must reach
-\cite{swoosh} --- and Lore's merge is careful but single-hop, so 39
-subjects have their facts split across two rows.
-
-\textbf{One measurement went the other way.} The study predicted that
-resolving an alias through the joined cell would be expensive, because a
-substring test over-matches, and built 57 aliases as deliberate prefixes
-of others. Across 1\,057 alias terms the filter returned 1\,159 rows of
-which 1\,153 were exact: six discarded, 0.5\% of the traffic. The
-magnitude did not support the argument, so it is reported as measured.
-
-\subsection{The update anomaly lands in the prose, not in the table}
-\label{sec:f7}
-
-\finding{F7} This is the finding a schema alone does not fix. A fact is
-restated across several memories in prose, and when the fact changes the
-Fact row is updated and the prose is not. Across the 1\,196 closed facts,
-3\,867 memories still assert the closed value: a mean of 3.23 stale
-restatements each, and for 33 facts the stale copies alone would fill a
-ten-row recall. An agent that retrieves memories rather than facts
-retrieves the old answer, in a confident sentence, nothing marking it
-retired.
-
-This is the classical update anomaly. Mem0 answers it by making
-\code{UPDATE} and \code{DELETE} explicit operations a writer must choose
-\cite{mem0}. Lore supersedes the fact row, which is correct and
-incomplete, because the copies live where supersession does not reach.
-
-\subsection{Three indexes over one text give two different answers}
+\subsection{The results cannot be compared with each other}
 \label{sec:f8}
 
-\finding{F8} The workload turned up a result it was not designed to find.
-Seven test phrases returned identical counts on all three indexes ---
-\emph{call graph} matched 677 memories on each, \emph{error rate} 200,
-\emph{deploy manifest} 152. The eighth did not. \emph{Timed out} appears
-nowhere as a literal string, because the memories say \emph{times out},
-so a literal search and SQLite's FTS5 both return 0 and PostgreSQL
-returns 669: the English configuration stems \emph{timed} to \emph{time}
-and drops \emph{out} as a stop word, so the phrase collapses to the
-lexeme \code{\textquotesingle time\textquotesingle} and matches every
-memory that mentions timing at all.
+\finding{F8} This finding cuts against the argument the rest of this
+report is making, and it belongs here for that reason.
 
-None of the three is wrong --- a stemmer is a considered position on what
-``discusses this'' means. What matters is that the position is a choice
-and no answer states which choice was made, so two teams on two engines
-reason from two different sets of facts.
+Read Table~\ref{tab:results} again as a comparison and it collapses.
+Mem0's 26\% is a relative improvement in an LLM-as-a-judge metric over a
+deployed baseline on LOCOMO \cite{mem0}. Zep's 94.8\% is an absolute
+accuracy against MemGPT's 93.4\% on DMR, and its 18.5\% is an improvement
+against baseline implementations on LongMemEval \cite{zep}. Different
+benchmarks, different baselines, different metrics, and in one case a
+relative figure set beside an absolute one.
 
-%% The brief sets a page budget for each of the three criteria, so
-%% each one starts on a fresh page and its span is countable.
-\clearpage
+So no ranking of these systems can be read off their own papers, and this
+report does not offer one. What the numbers jointly support is the
+weaker, sufficient claim of \S\ref{sec:f2}: structuring memory measurably
+beats resending the conversation. Anything stronger would need one
+benchmark, one baseline and one metric across all four, which nobody has
+yet run.
+
 %=====================================================================
+\clearpage
 \section{Recommendation}
 \label{sec:rec}
 %=====================================================================
 
-The recommendation is not ``use PostgreSQL''. Moving off the document
-substrate forfeits three things that are not conveniences: a surface
-non-engineers can audit, an authorisation model already provisioned, and
-no operational estate at all.
+The recommendation is not that these systems should have been built on
+PostgreSQL. Three of the four earn their design: paging is the right
+answer to a context limit, an emergent network is a real position on
+adaptability, and both structured systems measurably beat resending the
+conversation. The recommendation is narrower. \textbf{Declare the parts
+that are already a schema, and let the store enforce them.}
 
-\textbf{Keep the legible store as the system of record, and put a
-relational projection in front of it.} The projection holds the indexes,
-the constraints and the joins the substrate cannot declare, and holds no
-authority: it derives from the vault, so if it is wrong, drop it and
-derive it again. Because a constraint cannot refuse a write it never
-sees, the write paths differ. \textbf{The agent writes through the
-projection}, where a bad write is refused before it reaches the vault,
-which is what makes rules 1 and 3 true rather than aspirational.
-\textbf{People still write straight to the vault}, so a human edit that
-breaks an invariant fails the next rebuild instead --- detection rather
-than prevention, on a schedule nobody forgets. \textbf{Every read goes to
-the projection}, where a join, an aggregate and a transitive closure are
-each one statement.
-
-Six rules follow. Each names the finding forcing it; F1 forces none,
+Six rules follow. Each names the finding that forces it; F1 forces none,
 being the framing result rather than a defect.
 
 \begin{enumerate}
-  \item \textbf{Declare the key where the data is.} A unique index and
-        one \code{ON CONFLICT} statement close the window a
-        read-then-write upsert cannot; the same index on an alias stops
-        one real thing being introduced twice. \emph{(F3, F4, F6)}
-  \item \textbf{Put the join on the engine's side of the wire.} Move the
-        classes needing a join, an aggregate or a transitive closure ---
-        two thirds of this workload. \emph{(F2)}
-  \item \textbf{Give the fact table a temporal primary key.} An exclusion
-        constraint over a range type refuses the contradiction, leaving
-        the scan nothing to find \cite{sql2011}. \emph{(F4, F5)}
-  \item \textbf{Make every query name its axis.} Was the claim true on
-        day $D$, or did the store believe it on $D$? \emph{(F5)}
-  \item \textbf{Retire the restatements when you retire the fact.} Give
-        the extractor an explicit \code{UPDATE} and \code{DELETE}, as
-        Mem0 does \cite{mem0}. \emph{(F7)}
-  \item \textbf{Record what answered, and log what a cap dropped.} A
-        silent truncation reads as complete coverage. \emph{(F2b, F8)}
+  \item \textbf{Declare the key where the data is.} A unique index on the
+        canonical name of a thing, plus one \code{ON CONFLICT} statement,
+        removes the window a read-then-write update cannot close and
+        stops one real thing being introduced twice. \emph{(F5, F6)}
+  \item \textbf{Give the fact relation a temporal key.} An exclusion
+        constraint over a range type refuses the write that would let one
+        subject hold two objects at once, so no scan has to find it
+        afterwards. \emph{(F7)}
+  \item \textbf{Use the standard, not a hand-built pair of columns.}
+        Application-time period tables and system-versioned tables give
+        period-scoped updates and automatic history that hand-rolled
+        date columns do not \cite{sql2011}. \emph{(F7)}
+  \item \textbf{Make the update an operation the writer names.} Mem0's
+        \code{ADD}, \code{UPDATE}, \code{DELETE} and \code{NOOP} is a data
+        manipulation language; inferring the operation from context is
+        the anomaly the language replaced \cite{mem0}. \emph{(F4)}
+  \item \textbf{Resolve identity to closure, not pairwise.} Match and
+        merge have to reach a transitive closure before a resolution is
+        finished \cite{swoosh}, and a similarity threshold does not reach
+        it alone. \emph{(F5)}
+  \item \textbf{Report the benchmark, the baseline and the metric
+        together.} A number without all three cannot be compared with
+        another number, which is the state of the field today.
+        \emph{(F2, F8)}
 \end{enumerate}
 
-\textbf{When, and with what caveat.} Not on day one, but where
-maintenance passes stop finishing inside a session or more than one agent
-writes one key. The measurements bound the shape of the cost rather than
-any team's wall-clock, coming from an emulator over a generated corpus
-\cite{loreStudy}. What they settle is firmer: a memory that arrives at
-triples with validity intervals, an entity registry, provenance edges and
-a confidence score has arrived at a database schema, and the only
-question left is which guarantees it does without, and what it does
-instead.
+\textbf{When, and with what caveat.} These rules earn their cost once a
+memory is shared --- more than one writer, or a store outliving the
+person who filled it. Below that line a paged context or an emergent
+network is the better engineering choice, and the structure is a
+liability. The caveat is F8: every quantitative claim here is a figure a
+system reports about itself on a benchmark of its own choosing, so this
+report compares designs and does not rank them. What it settles is
+firmer. A memory that arrives at triples with validity intervals, an
+entity registry and a provenance edge has arrived at a database schema,
+and the only question left is which of the guarantees it does without,
+and what it does instead.
 
 %=====================================================================
 \section*{\sffamily\color{blue800}References}
 \addcontentsline{toc}{section}{References}
 
 Entries \textbf{[1]--[3]} are the three research papers added in this
-phase. Entries \textbf{[4]--[7]} are the subject system and the evidence
-base. Entries \textbf{[8]--[13]} support the argument and are also new to
-this report. No entry is carried over from Phase 1.
+phase. Entries \textbf{[4]--[7]} complete the comparison and the
+benchmark evidence, and \textbf{[8]--[11]} are the database and survey
+results the findings measure against. Every entry is new to this report.
 
 % thebibliography opens with a \section*{\refname} of its own, and this
 % report has already set that heading. Swallow the duplicate: the two
@@ -885,26 +888,18 @@ D. Yu. ``LongMemEval: Benchmarking Chat Assistants on Long-Term
 Interactive Memory.'' \emph{ICLR 2025}; arXiv:2410.10813.
 \url{https://arxiv.org/abs/2410.10813}
 
+\bibitem{memgpt} C. Packer, V. Fang, S. G. Patil, K. Lin, S. Wooders and
+J. E. Gonzalez. ``MemGPT: Towards LLMs as Operating Systems.''
+arXiv:2310.08560, 2023. \url{https://arxiv.org/abs/2310.08560}
 
-\bibitem{loreRepo} Notion Labs, Inc. (makenotion). ``Lore --- persistent,
-shared AI memory backed by Notion for MCP-compatible assistants.''
-GitHub, MIT licence, read at commit \code{95c3558}.
-\url{https://github.com/makenotion/lore}
+\bibitem{locomo} A. Maharana, D.-H. Lee, S. Tulyakov, M. Bansal,
+F. Barbieri and Y. Fang. ``Evaluating Very Long-Term Conversational
+Memory of LLM Agents.'' \emph{ACL 2024}; arXiv:2402.17753.
+\url{https://arxiv.org/abs/2402.17753}
 
-\bibitem{notionBlog} H. Salman. ``Building Shared Memory for AI Agents in
-Notion.'' Notion Blog, 18 August 2026.
-\href{https://www.notion.com/blog/building-shared-memory-for-ai-agents-in-notion}%
-{\nolinkurl{notion.com/blog/building-shared-memory-for-ai-agents-in-notion}}
-
-\bibitem{notionApi} Notion Labs, Inc. ``Request Limits'', ``Pagination''
-and ``Search by Title.'' Notion API Reference.
-\url{https://developers.notion.com/reference/request-limits}
-
-\bibitem{loreStudy} H. Khemani, K. Ahuja, M. Bassi and K. Agrawal.
-``Persistent Memory Architecture for Agents: A Review of Notion's Lore.''
-Review paper, measured 22 August 2026.
-\url{https://dbms-memory.khe.money}
-
+\bibitem{amem} W. Xu, Z. Liang, K. Mei, H. Gao, J. Tan and Y. Zhang.
+``A-MEM: Agentic Memory for LLM Agents.'' arXiv:2502.12110, 2025.
+\url{https://arxiv.org/abs/2502.12110}
 
 \bibitem{graphiti} Zep AI. ``Graphiti --- build temporal context graphs
 for AI agents.'' GitHub, Apache-2.0 licence.
@@ -922,10 +917,6 @@ North Holland, 1976, pp. 365--394.
 S. E. Whang and J. Widom. ``Swoosh: A Generic Approach to Entity
 Resolution.'' \emph{The VLDB Journal}, 18(1):255--276, 2009.
 
-\bibitem{amem} W. Xu, Z. Liang, K. Mei, H. Gao, J. Tan and Y. Zhang.
-``A-MEM: Agentic Memory for LLM Agents.'' arXiv:2502.12110, 2025.
-\url{https://arxiv.org/abs/2502.12110}
-
 \bibitem{du2025} Y. Du, W. Huang, D. Zheng, Z. Wang, S. Montella,
 M. Lapata, K.-F. Wong and J. Z. Pan. ``Rethinking Memory in AI: Taxonomy,
 Operations, Topics, and Future Directions.'' arXiv:2505.00675, 2025.
@@ -936,9 +927,6 @@ Operations, Topics, and Future Directions.'' arXiv:2505.00675, 2025.
 \vspace{1.2\baselineskip}
 {\color{blue200}\rule{\textwidth}{0.5pt}}\\[5pt]
 {\footnotesize\sffamily\color{grey600}
-\khe\ (241302081) \quad\textperiodcentered\quad Kush Ahuja
-\quad\textperiodcentered\quad Madhav Bassi \quad\textperiodcentered\quad
-Kushagra Agrawal\\[2pt]
 B.Tech CSE (AI/ML), Section C \quad\textperiodcentered\quad
 Department of Computer Science \& Engineering, SGT University\\[2pt]
 Phase 2 \quad\textperiodcentered\quad submitted 10 September 2026}
