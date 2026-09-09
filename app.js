@@ -18,6 +18,8 @@ const ICON_PATHS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/>',
   arrow: '<path d="M19 12H5M12 5l-7 7 7 7"/>',
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  external: '<path d="M14 5h5v5"/><path d="M10 14 19 5"/><path d="M19 12v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6"/>',
   db: '<ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/>',
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
   table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>',
@@ -44,6 +46,12 @@ function assetUrl(path) {
 }
 
 const PRACTICAL_FILE = 'DBMS_Practical_File.pdf';
+const PDFJS_VERSION = '4.10.38';
+const PDFJS_CDN = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build`;
+
+let pdfjsLibPromise = null;
+let pdfViewerSession = 0;
+let pdfViewerTeardown = () => {};
 
 function parseRoute() {
   const path = location.pathname.replace(/\/$/, '') || '/';
@@ -354,6 +362,187 @@ function buildLabCard(lab) {
   return link;
 }
 
+function labsByExperiment() {
+  return [...labs].sort((a, b) => Number(a.experiment) - Number(b.experiment));
+}
+
+function compactLabTitle(lab) {
+  if (/CREATE/i.test(lab.title) && /ALTER/i.test(lab.title)) return 'CREATE/ALTER';
+  return lab.title;
+}
+
+function formatExperimentRange(ordered) {
+  const nums = ordered.map((lab) => Number(lab.experiment)).filter((n) => Number.isFinite(n));
+  if (!nums.length) return 'All experiments';
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  if (min === max) return `Experiment ${min}`;
+  const unique = [...new Set(nums)].sort((a, b) => a - b);
+  if (unique.length === max - min + 1) return `Experiments ${min}–${max}`;
+  return `Experiments ${unique.join(', ')}`;
+}
+
+function practicalFileSubtitle() {
+  const ordered = labsByExperiment();
+  if (!ordered.length) return 'All experiments';
+  return `${formatExperimentRange(ordered)} · ${ordered.map(compactLabTitle).join(', ')}`;
+}
+
+function pdfActionButtons(pdfUrl, filename) {
+  return `
+    <div class="pdf-actions">
+      <a class="btn btn-info btn-sm" href="${escapeHtml(pdfUrl)}" target="_blank" rel="noopener noreferrer">${icon('external')} Open PDF</a>
+      <a class="btn btn-neutral btn-sm" href="${escapeHtml(pdfUrl)}" download="${escapeHtml(filename)}">${icon('download')} Download</a>
+    </div>`;
+}
+
+function pdfViewerMarkup(title) {
+  return `
+    <div class="pdf-viewer">
+      <p class="pdf-status" role="status">Loading PDF…</p>
+      <div class="pdf-pages" role="region" aria-label="${escapeHtml(title)}"></div>
+    </div>`;
+}
+
+function loadPdfJs() {
+  if (pdfjsLibPromise) return pdfjsLibPromise;
+  // PDF.js is ESM-only; load on demand so the SQL playground is not charged for it.
+  pdfjsLibPromise = import(`${PDFJS_CDN}/pdf.min.mjs`).then((lib) => {
+    lib.GlobalWorkerOptions.workerSrc = `${PDFJS_CDN}/pdf.worker.min.mjs`;
+    return lib;
+  }).catch((err) => {
+    pdfjsLibPromise = null;
+    throw err;
+  });
+  return pdfjsLibPromise;
+}
+
+function stopPdfViewer() {
+  pdfViewerSession += 1;
+  pdfViewerTeardown();
+  pdfViewerTeardown = () => {};
+}
+
+function isRenderingCancelled(err) {
+  return err && (err.name === 'RenderingCancelledException' || err.message === 'Rendering cancelled');
+}
+
+async function mountPdfViewer(root, url) {
+  stopPdfViewer();
+  const session = pdfViewerSession;
+  const statusEl = root.querySelector('.pdf-status');
+  const pagesEl = root.querySelector('.pdf-pages');
+  if (!statusEl || !pagesEl) return;
+
+  let pdf = null;
+  let loadingTask = null;
+  let observer = null;
+  let lastWidth = 0;
+  let paintGeneration = 0;
+  const renderTasks = [];
+
+  const alive = () => session === pdfViewerSession && root.isConnected;
+
+  pdfViewerTeardown = () => {
+    paintGeneration += 1;
+    if (observer) observer.disconnect();
+    renderTasks.splice(0).forEach((task) => { try { task.cancel(); } catch (e) { /* noop */ } });
+    if (loadingTask) {
+      try { loadingTask.destroy(); } catch (e) { /* noop */ }
+      loadingTask = null;
+    }
+    if (pdf) {
+      try { pdf.destroy(); } catch (e) { /* noop */ }
+      pdf = null;
+    }
+  };
+
+  try {
+    const pdfjsLib = await loadPdfJs();
+    if (!alive()) return;
+    loadingTask = pdfjsLib.getDocument({ url, withCredentials: false });
+    pdf = await loadingTask.promise;
+    if (!alive()) return;
+
+    const total = pdf.numPages;
+    statusEl.textContent = `Loading ${total} page${total === 1 ? '' : 's'}…`;
+    pagesEl.replaceChildren();
+    for (let n = 1; n <= total; n += 1) {
+      const article = document.createElement('article');
+      article.className = 'pdf-page';
+      article.setAttribute('aria-label', `Page ${n} of ${total}`);
+      const canvas = document.createElement('canvas');
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', `Page ${n} of ${total}`);
+      article.appendChild(canvas);
+      pagesEl.appendChild(article);
+    }
+
+    async function paintAll(width) {
+      const paintId = ++paintGeneration;
+      renderTasks.splice(0).forEach((task) => { try { task.cancel(); } catch (e) { /* noop */ } });
+      for (let n = 1; n <= total; n += 1) {
+        if (!alive() || paintId !== paintGeneration) return;
+        const article = pagesEl.children[n - 1];
+        const canvas = article.querySelector('canvas');
+        const page = await pdf.getPage(n);
+        if (!alive() || paintId !== paintGeneration) {
+          page.cleanup();
+          return;
+        }
+        const base = page.getViewport({ scale: 1 });
+        const scale = width / base.width;
+        const viewport = page.getViewport({ scale });
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        const ctx = canvas.getContext('2d', { alpha: false });
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const task = page.render({
+          canvasContext: ctx,
+          viewport,
+          transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+        });
+        renderTasks.push(task);
+        try {
+          await task.promise;
+        } catch (err) {
+          page.cleanup();
+          if (isRenderingCancelled(err)) return;
+          throw err;
+        }
+        article.classList.add('is-painted');
+        page.cleanup();
+        if (n === 1) statusEl.textContent = `Loading ${total} pages…`;
+      }
+      if (alive() && paintId === paintGeneration) {
+        statusEl.textContent = `${total} page${total === 1 ? '' : 's'} · scroll to read`;
+      }
+    }
+
+    function schedulePaint() {
+      const width = Math.round(pagesEl.clientWidth);
+      if (width < 32 || width === lastWidth) return;
+      lastWidth = width;
+      paintAll(width).catch((err) => {
+        if (!alive() || isRenderingCancelled(err)) return;
+        statusEl.className = 'banner banner-error';
+        statusEl.innerHTML = `${icon('alert')}<div><strong>Could not display the PDF here.</strong><br>${escapeHtml(err.message)} Use Open PDF to view it in your browser.</div>`;
+      });
+    }
+
+    observer = new ResizeObserver(schedulePaint);
+    observer.observe(pagesEl);
+    schedulePaint();
+  } catch (err) {
+    if (!alive()) return;
+    statusEl.className = 'banner banner-error';
+    statusEl.innerHTML = `${icon('alert')}<div><strong>Could not display the PDF here.</strong><br>${escapeHtml(err.message)} Use Open PDF to view it in your browser.</div>`;
+  }
+}
+
 function renderPracticalFile() {
   currentLab = null;
   editorCM = null;
@@ -374,13 +563,16 @@ function renderPracticalFile() {
     </div>
     <div class="panel">
       <div class="panel-head">
-        <div><h2 class="panel-title">DBMS_Practical_File.pdf</h2><p class="sub">Experiments 1–3 · Employee Directory, CREATE/ALTER, SQL Joins</p></div>
+        <div>
+          <h2 class="panel-title">DBMS_Practical_File.pdf</h2>
+          <p class="sub">${escapeHtml(practicalFileSubtitle())}</p>
+        </div>
+        ${pdfActionButtons(pdfUrl, PRACTICAL_FILE)}
       </div>
-      <div class="pdf-frame-wrap">
-        <iframe class="pdf-frame" src="${escapeHtml(pdfUrl)}" title="DBMS Practical File PDF"></iframe>
-      </div>
+      ${pdfViewerMarkup('DBMS Practical File PDF')}
     </div>
   `;
+  mountPdfViewer(main.querySelector('.pdf-viewer'), pdfUrl);
 }
 
 /* ── Lab shell ───────────────────────────────────────────── */
@@ -463,11 +655,11 @@ function renderReportPanel() {
   panel.innerHTML = `
     <div class="panel-head">
       <div><h2 class="panel-title">Lab Report</h2><p class="sub">${escapeHtml(currentLab.report)}</p></div>
+      ${pdfActionButtons(pdfUrl, currentLab.report)}
     </div>
-    <div class="pdf-frame-wrap">
-      <iframe class="pdf-frame" src="${escapeHtml(pdfUrl)}" title="Lab report PDF"></iframe>
-    </div>
+    ${pdfViewerMarkup(`${currentLab.title} lab report PDF`)}
   `;
+  mountPdfViewer(panel.querySelector('.pdf-viewer'), pdfUrl);
 }
 
 function renderSqlPanel() {
@@ -621,6 +813,7 @@ function renderSchemaPanel() {
 /* ── Init ────────────────────────────────────────────────── */
 
 async function render() {
+  stopPdfViewer();
   const route = parseRoute();
   if (route.view === 'home') {
     renderHome();
