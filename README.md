@@ -21,7 +21,7 @@ Each lab has its own page with in-app tabs — no external redirects:
 Open [`index.html`](index.html) locally or run a static server to develop:
 
 - Browse all lab sessions in one place
-- View experiment reports as PDFs
+- View experiment reports as PDFs (PDF.js pages in the document — scrolls on phones)
 - Run each lab's SQL in a real in-browser SQLite engine (sql.js)
 
 > **Note:** The hub needs to be served over HTTP (Vercel, VS Code Live Server, or `python -m http.server`). Opening `index.html` directly from the filesystem won't load SQL files.
@@ -29,8 +29,8 @@ Open [`index.html`](index.html) locally or run a static server to develop:
 ### Local server
 
 ```bash
-python -m http.server 8080
-# then open http://localhost:8080
+npx serve .                 # applies serve.json rewrites for /practical-file and /lab/*
+python -m http.server 8080  # home only unless you add the same rewrites
 ```
 
 ## Lab sessions
@@ -57,4 +57,5 @@ Requires Python 3, `reportlab`, and `pypdf`.
 
 - **SQL engine:** [sql.js](https://sql.js.org/) (SQLite → WebAssembly)
 - **Editor:** [CodeMirror 5](https://codemirror.net/5/)
+- **PDF viewer:** [PDF.js](https://mozilla.github.io/pdf.js/) (stacked pages + Open/Download fallback)
 - **PDF reports:** generated with ReportLab

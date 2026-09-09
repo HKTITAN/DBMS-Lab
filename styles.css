@@ -72,13 +72,19 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: none;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  height: auto;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
+  height: auto;
+  overflow-x: visible;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
   background: var(--wall);
   color: var(--ink);
   font-family: var(--font-body);
@@ -162,6 +168,8 @@ button, .btn, .chip, .tab, .lab-card {
     calc(var(--sp-10) + var(--safe-bottom))
     calc(var(--sp-5) + var(--safe-left));
   min-height: 100dvh;
+  height: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
@@ -214,7 +222,13 @@ button, .btn, .chip, .tab, .lab-card {
 
 .topbar-actions { display: flex; gap: var(--sp-2); }
 
-.content { flex: 1; min-width: 0; }
+/* flex-basis:auto + no shrink so iOS Safari cannot trap PDF pages in a viewport-tall flex item */
+.content {
+  flex: 1 0 auto;
+  min-width: 0;
+  min-height: auto;
+  overflow: visible;
+}
 
 .app-footer {
   text-align: center;
@@ -242,6 +256,7 @@ button, .btn, .chip, .tab, .lab-card {
 .panel-title {
   font-size: 1.25rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .hero { margin-bottom: var(--sp-2); }
@@ -477,7 +492,10 @@ button, .btn, .chip, .tab, .lab-card {
 }
 .tab.is-active .icon { color: white; }
 
-.panel { animation: panel-in var(--dur-slow) var(--ease-out); }
+.panel {
+  animation: panel-in var(--dur-slow) var(--ease-out);
+  overflow: visible;
+}
 @keyframes panel-in {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -485,17 +503,25 @@ button, .btn, .chip, .tab, .lab-card {
 
 .panel-head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sp-3);
   margin-bottom: var(--sp-5);
 }
-.sub { color: var(--ink-soft); font-size: .9rem; font-weight: 600; }
+.panel-head > div:first-child {
+  flex: 1;
+  min-width: min(100%, 16rem);
+}
+.sub {
+  color: var(--ink-soft);
+  font-size: .9rem;
+  font-weight: 600;
+  text-wrap: pretty;
+}
 
-/* Embeds */
-.embed-wrap,
-.pdf-frame-wrap {
+/* Interactive lab iframe (employee directory) */
+.embed-wrap {
   border: 2px solid var(--line);
   border-radius: var(--r-xl);
   overflow: hidden;
@@ -504,13 +530,70 @@ button, .btn, .chip, .tab, .lab-card {
   box-shadow: 0 4px 0 var(--line);
 }
 
-.embed-frame,
-.pdf-frame {
+.embed-frame {
   width: 100%;
   height: min(72dvh, 880px);
   border: none;
   display: block;
   background: var(--paper);
+}
+
+/* In-page PDF.js viewer — pages stack in document flow so iOS Safari can scroll */
+.pdf-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  overflow: visible;
+  height: auto;
+  max-height: none;
+}
+.pdf-status {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: .85rem;
+  font-weight: 700;
+}
+.pdf-status.banner { color: inherit; }
+.pdf-pages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  width: 100%;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}
+.pdf-page {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(180deg, var(--wall-strong), var(--paper));
+  border: 2px solid var(--line);
+  border-radius: var(--r-xl);
+  overflow: visible;
+  box-shadow: 0 4px 0 var(--line);
+  aspect-ratio: 210 / 297;
+  touch-action: pan-y;
+}
+.pdf-page.is-painted {
+  aspect-ratio: auto;
+  background: var(--paper);
+}
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: calc(var(--r-xl) - 2px);
+  pointer-events: none;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* SQL compiler */
@@ -754,7 +837,18 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   }
   .tabbar { align-self: stretch; width: 100%; }
   .tab .tab-label { font-size: .8rem; }
-  .embed-frame, .pdf-frame { height: min(65dvh, 680px); }
+  .embed-frame { height: min(65dvh, 680px); }
+  .pdf-actions {
+    width: 100%;
+    position: sticky;
+    top: calc(var(--sp-2) + var(--safe-top));
+    z-index: 20;
+    background: color-mix(in oklch, var(--wall) 92%, white);
+    padding: var(--sp-2) 0;
+  }
+  .pdf-actions .btn { flex: 1 1 calc(50% - var(--sp-2)); }
+  .pdf-page { border-radius: var(--r-lg); }
+  .pdf-page canvas { border-radius: calc(var(--r-lg) - 2px); }
   .lab-grid { grid-template-columns: 1fr; }
 }
 

@@ -1,6 +1,21 @@
 {
   "rewrites": [
     { "source": "/practical-file", "destination": "/index.html" },
+    { "source": "/practical-file/", "destination": "/index.html" },
     { "source": "/lab/**", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/app.js",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/styles.css",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/labs.json",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    }
   ]
 }
