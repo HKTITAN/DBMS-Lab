@@ -15,7 +15,7 @@ import sqlite3
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import cm
@@ -59,68 +59,123 @@ CONTENT_W = PAGE_W - 2 * MARGIN
 
 LAB_DATE = "09 September 2026"
 
-# Lab sheet wording (duplicate "1." kept as written). "distant" = DISTINCT.
+# Sheet numbered CREATE + INSERT as two "1." items; shown as 1(a) / 1(b).
+EMPLOYEE_ATTRIBUTES = [
+    "sr no",
+    "employee name",
+    "job",
+    "manager",
+    "hire date",
+    "salary",
+    "department no",
+    "city",
+]
+
+
+def sql_kw(word: str) -> str:
+    """Courier SQL keyword for question text (word is a trusted literal)."""
+    return f"<font face='Courier'>{word}</font>"
+
+
 QUESTIONS = [
-    (
-        "1",
-        "create a table employee with the following attributes: "
-        "sr no, employee name, job, manager, hire date, salary, "
-        "department no, city",
-    ),
-    ("1", "insert 10 rows in the above mentioned table"),
-    ("2", "select all the details from the employee table"),
-    ("3", "select only distant department number from employee table"),
-    ("4", "select all department numbers from employee table"),
-    (
-        "5",
-        "select employee name, salary where salary is >30000 rs "
-        "from employee table",
-    ),
-    (
-        "6",
-        "select employee name, hire date where city is not delhi "
-        "from employee table",
-    ),
-    (
-        "7",
-        "select employee name, hire date where city is either delhi "
-        "or mumbai from employee table",
-    ),
-    (
-        "8",
-        "select employee number, employee name where salary is "
-        "between 30000 rs and 50000 rs",
-    ),
-    (
-        "9",
-        "select employee number, employee name where salary is not "
-        "between 30000 and 50000 from employee table",
-    ),
-    (
-        "10",
-        "select all the details where city is among the following: "
-        "delhi, mumbai, chennai, Bangalore",
-    ),
-    (
-        "11",
-        "select all the details where city is not mumbai, delhi or "
-        "chennai from employee table",
-    ),
-    (
-        "12",
-        "select all the details from the employee table and order by "
-        "employee names in descending order.",
-    ),
-    (
-        "13",
-        "display the list of employees in ascending order from "
-        "employee table.",
-    ),
+    {
+        "num": "1(a)",
+        "html": (
+            f"Create a table {sql_kw('employee')} with the following attributes:"
+        ),
+        "subitems": EMPLOYEE_ATTRIBUTES,
+    },
+    {
+        "num": "1(b)",
+        "html": "Insert 10 rows in the above mentioned table.",
+    },
+    {
+        "num": "2",
+        "html": f"{sql_kw('SELECT')} all the details from the employee table.",
+    },
+    {
+        "num": "3",
+        "html": (
+            f"Select only {sql_kw('DISTINCT')} department number from the "
+            "employee table."
+        ),
+        "note": "The lab sheet wrote &ldquo;distant&rdquo; for this question.",
+    },
+    {
+        "num": "4",
+        "html": f"{sql_kw('SELECT')} all department numbers from the employee table.",
+    },
+    {
+        "num": "5",
+        "html": (
+            f"{sql_kw('SELECT')} employee name, salary "
+            f"{sql_kw('WHERE')} salary is &gt; 30000 rs from the employee table."
+        ),
+    },
+    {
+        "num": "6",
+        "html": (
+            f"{sql_kw('SELECT')} employee name, hire date "
+            f"{sql_kw('WHERE')} city is not Delhi from the employee table."
+        ),
+    },
+    {
+        "num": "7",
+        "html": (
+            f"{sql_kw('SELECT')} employee name, hire date "
+            f"{sql_kw('WHERE')} city is either Delhi or Mumbai from the "
+            "employee table."
+        ),
+    },
+    {
+        "num": "8",
+        "html": (
+            f"{sql_kw('SELECT')} employee number, employee name "
+            f"{sql_kw('WHERE')} salary is {sql_kw('BETWEEN')} 30000 rs and "
+            "50000 rs."
+        ),
+    },
+    {
+        "num": "9",
+        "html": (
+            f"{sql_kw('SELECT')} employee number, employee name "
+            f"{sql_kw('WHERE')} salary is {sql_kw('NOT BETWEEN')} 30000 and "
+            "50000 from the employee table."
+        ),
+    },
+    {
+        "num": "10",
+        "html": (
+            f"{sql_kw('SELECT')} all the details {sql_kw('WHERE')} city is "
+            "among the following: Delhi, Mumbai, Chennai, Bangalore."
+        ),
+    },
+    {
+        "num": "11",
+        "html": (
+            f"{sql_kw('SELECT')} all the details {sql_kw('WHERE')} city is not "
+            "Mumbai, Delhi or Chennai from the employee table."
+        ),
+    },
+    {
+        "num": "12",
+        "html": (
+            f"{sql_kw('SELECT')} all the details from the employee table and "
+            f"{sql_kw('ORDER BY')} employee names in descending order."
+        ),
+    },
+    {
+        "num": "13",
+        "html": (
+            "Display the list of employees in ascending order from the "
+            "employee table."
+        ),
+    },
 ]
 
 SQL_SOLUTIONS = [
     (
-        "1",
+        "1(a)",
         "CREATE TABLE employee (\n"
         "    sr_no INTEGER PRIMARY KEY,\n"
         "    employee_name TEXT NOT NULL,\n"
@@ -133,7 +188,7 @@ SQL_SOLUTIONS = [
         ");",
     ),
     (
-        "1",
+        "1(b)",
         "INSERT INTO employee\n"
         "    (sr_no, employee_name, job, manager, hire_date, salary, department_no, city)\n"
         "VALUES\n"
@@ -339,6 +394,23 @@ S = {
     "qcell": ParagraphStyle(
         "qcell", parent=_base["Normal"], fontName="Helvetica", fontSize=8.5, leading=11.5,
     ),
+    "qnum": ParagraphStyle(
+        "qnum", parent=_base["Normal"], fontName="Helvetica-Bold", fontSize=9.5,
+        leading=13.5, alignment=TA_LEFT, textColor=NAVY,
+    ),
+    "qtext": ParagraphStyle(
+        "qtext", parent=_base["Normal"], fontName="Helvetica", fontSize=9.5,
+        leading=13.5, alignment=TA_LEFT, textColor=colors.HexColor("#1A1A1A"),
+    ),
+    "qsub": ParagraphStyle(
+        "qsub", parent=_base["Normal"], fontName="Helvetica", fontSize=9,
+        leading=12.5, leftIndent=14, alignment=TA_LEFT,
+        textColor=colors.HexColor("#1A1A1A"),
+    ),
+    "qnote": ParagraphStyle(
+        "qnote", parent=_base["Normal"], fontName="Helvetica-Oblique", fontSize=8.5,
+        leading=11.5, alignment=TA_LEFT, textColor=GREY, spaceBefore=2,
+    ),
     "cover_center": ParagraphStyle(
         "cover_center", parent=_base["Normal"], fontName="Helvetica", fontSize=11,
         leading=16, alignment=TA_CENTER, textColor=colors.HexColor("#1A1A1A"), spaceAfter=4,
@@ -414,28 +486,31 @@ def table(rows, col_widths=None, pad=5):
     return KeepTogether([t])
 
 
-def questions_table():
-    header = [Paragraph("Q. No.", S["cellb"]), Paragraph("Question (as given)", S["cellb"])]
-    data = [header]
-    for num, text in QUESTIONS:
-        data.append([
-            Paragraph(num, S["qcell"]),
-            Paragraph(_esc(text), S["qcell"]),
-        ])
-    t = Table(data, colWidths=[CONTENT_W * 0.12, CONTENT_W * 0.88], hAlign="CENTER", repeatRows=1)
-    t.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), NAVY),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("ALIGN", (0, 1), (0, -1), "CENTER"),
-        ("TOPPADDING", (0, 0), (-1, -1), 4),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-        ("LEFTPADDING", (0, 0), (-1, -1), 5),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
-        ("LINEBELOW", (0, 0), (-1, -2), 0.4, RULE),
-        ("LINEBELOW", (0, -1), (-1, -1), 0.8, NAVY),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, LIGHT]),
-    ]))
-    return t
+def questions_flow() -> list:
+    """Numbered lab-sheet list: wrapping questions, nested attributes on 1(a)."""
+    num_w = 1.55 * cm
+    text_w = CONTENT_W - num_w
+    flow: list = []
+    for q in QUESTIONS:
+        body = [Paragraph(q["html"], S["qtext"])]
+        for attr in q.get("subitems") or []:
+            body.append(Paragraph(f"&ndash;&nbsp;&nbsp;{_esc(attr)}", S["qsub"]))
+        if q.get("note"):
+            body.append(Paragraph(q["note"], S["qnote"]))
+        row = Table(
+            [[Paragraph(_esc(q["num"]) + ".", S["qnum"]), body]],
+            colWidths=[num_w, text_w],
+        )
+        row.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (0, 0), 6),
+            ("RIGHTPADDING", (1, 0), (1, 0), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        flow.append(row)
+    return flow
 
 
 def solutions_table():
@@ -449,7 +524,7 @@ def solutions_table():
             Paragraph(num, S["qcell"]),
             Paragraph(_esc(sql).replace("\n", "<br/>"), S["sqlcell"]),
         ])
-    t = Table(data, colWidths=[CONTENT_W * 0.12, CONTENT_W * 0.88], hAlign="CENTER", repeatRows=1)
+    t = Table(data, colWidths=[CONTENT_W * 0.14, CONTENT_W * 0.86], hAlign="CENTER", repeatRows=1)
     t.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), NAVY),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
@@ -622,12 +697,14 @@ def build_story(*, include_cover: bool = True) -> list:
 
     st.append(heading("4. Questions"))
     st.append(para(
-        "The experiment questions are reproduced as written on the lab sheet "
-        "(two items numbered <b>1</b>). Question 3 writes &ldquo;distant&rdquo;; "
-        "the SQL keyword is <font face='Courier'>DISTINCT</font>. "
-        "Employee number is stored as <font face='Courier'>sr_no</font>."
+        "The lab sheet numbered both "
+        f"{sql_kw('CREATE')} and {sql_kw('INSERT')} as <b>1</b>; they are shown "
+        "here as <b>1(a)</b> and <b>1(b)</b>. Question 3 wrote "
+        "&ldquo;distant&rdquo;; the SQL keyword is "
+        f"{sql_kw('DISTINCT')}. Employee number is stored as "
+        f"{sql_kw('sr_no')}."
     ))
-    st.append(questions_table())
+    st.extend(questions_flow())
 
     st.append(heading("5. Procedure"))
     st.append(para(
@@ -664,20 +741,20 @@ def build_story(*, include_cover: bool = True) -> list:
     st.append(table(
         [
             ["Q. No.", "Rows", "What the result shows"],
-            ["1 (create)", "—", "Table employee created with 8 attributes"],
-            ["1 (insert)", "10", "10 rows inserted"],
+            ["1(a)", "—", "Table employee created with 8 attributes"],
+            ["1(b)", "10", "10 rows inserted"],
             ["2", "10", "All details from the employee table"],
-            ["3", "6", "Distant/DISTINCT department numbers: 10, 20, 30, 40, 50, 60"],
+            ["3", "6", "DISTINCT department numbers: 10, 20, 30, 40, 50, 60"],
             ["4", "10", "All department numbers (dept 20 appears three times)"],
-            ["5", "7", "employee name, salary where salary is &gt;30000 rs"],
-            ["6", "8", "employee name, hire date where city is not delhi"],
-            ["7", "4", "employee name, hire date where city is delhi or mumbai"],
-            ["8", "5", "employee number, name where salary is between 30000 rs and 50000 rs"],
-            ["9", "5", "employee number, name where salary is not between 30000 and 50000"],
-            ["10", "8", "all details where city is delhi, mumbai, chennai, Bangalore"],
-            ["11", "4", "all details where city is not mumbai, delhi or chennai"],
-            ["12", "10", "all details ordered by employee names descending"],
-            ["13", "10", "list of employees in ascending order"],
+            ["5", "7", "Employee name and salary where salary is &gt; 30000 rs"],
+            ["6", "8", "Employee name and hire date where city is not Delhi"],
+            ["7", "4", "Employee name and hire date where city is Delhi or Mumbai"],
+            ["8", "5", "Employee number and name where salary is between 30000 rs and 50000 rs"],
+            ["9", "5", "Employee number and name where salary is not between 30000 and 50000"],
+            ["10", "8", "All details where city is Delhi, Mumbai, Chennai, or Bangalore"],
+            ["11", "4", "All details where city is not Mumbai, Delhi, or Chennai"],
+            ["12", "10", "All details ordered by employee names descending"],
+            ["13", "10", "List of employees in ascending order"],
         ],
         col_widths=[CONTENT_W * 0.16, CONTENT_W * 0.10, CONTENT_W * 0.64],
         pad=4,
@@ -687,7 +764,7 @@ def build_story(*, include_cover: bool = True) -> list:
         "Question 3 (<font face='Courier'>DISTINCT</font>) collapses ten department "
         "values to six unique numbers; question 4 lists all ten. Questions 8 and 9 "
         "partition salaries with no overlap (5 + 5 = 10). Question 11 keeps "
-        "Bangalore, Hyderabad, and Pune — cities that are not mumbai, delhi, or chennai."
+        "Bangalore, Hyderabad, and Pune — cities that are not Mumbai, Delhi, or Chennai."
     ))
 
     st.append(heading("9. Conclusion"))

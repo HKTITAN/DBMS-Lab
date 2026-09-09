@@ -5,40 +5,41 @@
 -- SQLite  (sql.js compiler / DB Browser / sqlite3)
 -- For the class SQL Server, run employee.sqlserver.sql instead.
 --
--- Lab questions (wording as given; "distant" = DISTINCT)
--- 1. create a table employee with the following attributes:
---    sr no, employee name, job, manager, hire date, salary,
---    department no, city
--- 1. insert 10 rows in the above mentioned table
--- 2. select all the details from the employee table
--- 3. select only distant department number from employee table
--- 4. select all department numbers from employee table
--- 5. select employee name, salary where salary is >30000 rs
---    from employee table
--- 6. select employee name, hire date where city is not delhi
---    from employee table
--- 7. select employee name, hire date where city is either
---    delhi or mumbai from employee table
--- 8. select employee number, employee name where salary is
---    between 30000 rs and 50000 rs
--- 9. select employee number, employee name where salary is
---    not between 30000 and 50000 from employee table
--- 10. select all the details where city is among the following:
---     delhi, mumbai, chennai, Bangalore
--- 11. select all the details where city is not mumbai, delhi
---     or chennai from employee table
--- 12. select all the details from the employee table and
---     order by employee names in descending order.
--- 13. display the list of employees in ascending order from
---     employee table.
+-- Lab questions (1(a)/1(b) = sheet's two "1." items; "distant" = DISTINCT)
+-- 1(a). Create a table employee with the following attributes:
+--       sr no, employee name, job, manager, hire date, salary,
+--       department no, city
+-- 1(b). Insert 10 rows in the above mentioned table
+-- 2. SELECT all the details from the employee table
+-- 3. Select only DISTINCT department number from employee table
+--    (lab sheet wrote "distant")
+-- 4. SELECT all department numbers from the employee table
+-- 5. SELECT employee name, salary WHERE salary is > 30000 rs
+--    from the employee table
+-- 6. SELECT employee name, hire date WHERE city is not Delhi
+--    from the employee table
+-- 7. SELECT employee name, hire date WHERE city is either
+--    Delhi or Mumbai from the employee table
+-- 8. SELECT employee number, employee name WHERE salary is
+--    BETWEEN 30000 rs and 50000 rs
+-- 9. SELECT employee number, employee name WHERE salary is
+--    NOT BETWEEN 30000 and 50000 from the employee table
+-- 10. SELECT all the details WHERE city is among the following:
+--     Delhi, Mumbai, Chennai, Bangalore
+-- 11. SELECT all the details WHERE city is not Mumbai, Delhi
+--     or Chennai from the employee table
+-- 12. SELECT all the details from the employee table and
+--     ORDER BY employee names in descending order
+-- 13. Display the list of employees in ascending order from
+--     the employee table.
 -- ============================================================
 
 DROP TABLE IF EXISTS employee;
 
 -- ------------------------------------------------------------
--- 1. create a table employee with the following attributes:
---    sr no, employee name, job, manager, hire date, salary,
---    department no, city
+-- 1(a). Create a table employee with the following attributes:
+--       sr no, employee name, job, manager, hire date, salary,
+--       department no, city
 -- ------------------------------------------------------------
 CREATE TABLE employee (
     sr_no          INTEGER PRIMARY KEY,
@@ -52,7 +53,7 @@ CREATE TABLE employee (
 );
 
 -- ------------------------------------------------------------
--- 1. insert 10 rows in the above mentioned table
+-- 1(b). Insert 10 rows in the above mentioned table
 --    • salaries below, inside, and above 30000–50000
 --    • cities: Delhi, Mumbai, Chennai, Bangalore, Hyderabad, Pune
 --    • mixed department numbers (some duplicates)
@@ -79,8 +80,8 @@ VALUES
 SELECT * FROM employee;
 
 -- ------------------------------------------------------------
--- 3. select only distant department number from employee table
---    ("distant" on the lab sheet = DISTINCT)
+-- 3. Select only DISTINCT department number from employee table
+--    (lab sheet wrote "distant")
 -- ------------------------------------------------------------
 -- Distant (DISTINCT) department number
 SELECT DISTINCT department_no FROM employee;
