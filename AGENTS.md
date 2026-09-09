@@ -51,7 +51,9 @@ Rebuild the **standalone** PDF in the lab folder first, then the **compiled** pr
 
 ## Hub
 
-Static SPA. Hub assets **must** be root-absolute (`/app.js`, `/styles.css`) plus `<base href="/">`. SPA rewrites in `vercel.json` / `serve.json` list **known routes only** (`/practical-file`, `/lab/:id`, `/lab/:id/{report,sql,schema,departments,data,compiler}`). Never rewrite `*.css` / `*.js` / `*.json` / `*.pdf` / `DD-MM-YYYY/*` to `index.html` — `/lab/:id/:tab` would turn `/lab/09-09-2026/styles.css` into HTML and a refresh looks blank. If you add a hub tab, add its rewrite too.
+Static SPA. Hub assets **must** be root-absolute (`/app.js`, `/styles.css`) plus `<base href="/">`. SPA rewrites list **known routes only** (`/practical-file`, `/lab/:id`, `/lab/:id/{report,sql,schema,departments,data,compiler}`). Never rewrite `*.css` / `*.js` / `*.json` / `*.pdf` / `DD-MM-YYYY/*` — `/lab/:id/:tab` would turn `/lab/09-09-2026/styles.css` into HTML.
+
+`vercel.json` has `cleanUrls: true`, so those rewrite **destinations must be `/index`**, not `/index.html` (otherwise Vercel returns `404` / `x-vercel-error: NOT_FOUND` on hard refresh). `serve.json` still destinations `/index.html` for `npx serve`. If you add a hub tab, add its rewrite too.
 
 Routes: `/` (cards from `labs.json`), `/lab/<id>/<tab>` (`report` | `sql` | `schema`, or directory tabs), `/practical-file`.
 
