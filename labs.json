@@ -1,5 +1,19 @@
 [
   {
+    "id": "09-09-2026",
+    "folder": "09-09-2026",
+    "date": "09 Sep 2026",
+    "experiment": "4",
+    "title": "SELECT Queries",
+    "subtitle": "DISTINCT, WHERE, BETWEEN, IN & ORDER BY",
+    "topic": "Lab questions: CREATE employee, insert 10 rows, then SELECT all / DISTINCT department no / WHERE / BETWEEN / IN / ORDER BY (as given on the sheet).",
+    "type": "sql",
+    "sqlFile": "employee.sql",
+    "report": "DBMS_Lab_Employee_Select_Report.pdf",
+    "color": "#8E44AD",
+    "defaultTab": "report"
+  },
+  {
     "id": "02-09-2026",
     "folder": "02-09-2026",
     "date": "02 Sep 2026",
