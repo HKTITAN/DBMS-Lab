@@ -58,7 +58,7 @@ function parseRoute() {
   if (path === '/' || path === '/index.html') return { view: 'home' };
   if (path === '/practical-file') return { view: 'practical' };
   const m = path.match(/^\/lab\/([^/]+)(?:\/([^/]+))?$/);
-  if (!m) return { view: 'home' };
+  if (!m) return { view: 'notfound' };
   return { view: 'lab', id: m[1], tab: m[2] || null };
 }
 
@@ -415,7 +415,7 @@ function pdfActionButtons(pdfUrl, filename) {
 
 function pdfViewerMarkup(title) {
   return `
-    <div class="pdf-viewer">
+    <div class="pdf-viewer" aria-busy="true">
       <p class="pdf-status" role="status">Loading PDF…</p>
       <div class="pdf-pages" role="region" aria-label="${escapeHtml(title)}"></div>
     </div>`;
@@ -442,6 +442,25 @@ function stopPdfViewer() {
 
 function isRenderingCancelled(err) {
   return err && (err.name === 'RenderingCancelledException' || err.message === 'Rendering cancelled');
+}
+
+function yieldToMain() {
+  if (typeof scheduler !== 'undefined' && typeof scheduler.yield === 'function') {
+    return scheduler.yield();
+  }
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function recoveryActionsHtml() {
+  return `
+    <p class="recovery-actions">
+      <a class="btn btn-info btn-sm" href="/">${icon('arrow')} Back home</a>
+      <button type="button" class="btn btn-neutral btn-sm" id="reloadPageBtn">Reload</button>
+    </p>`;
+}
+
+function bindRecoveryActions(root) {
+  root?.querySelector('#reloadPageBtn')?.addEventListener('click', () => location.reload());
 }
 
 function pdfDocOptions() {
@@ -487,6 +506,7 @@ async function mountPdfViewer(root, url) {
 
   pdfViewerTeardown = () => {
     paintGeneration += 1;
+    root.removeAttribute('aria-busy');
     if (observer) observer.disconnect();
     renderTasks.splice(0).forEach((task) => { try { task.cancel(); } catch (e) { /* noop */ } });
     if (loadingTask) {
@@ -564,20 +584,31 @@ async function mountPdfViewer(root, url) {
         article.classList.add('is-painted');
         page.cleanup();
         if (n === 1) statusEl.textContent = `Loading ${total} pages…`;
+        if (n < total) await yieldToMain();
       }
       if (alive() && paintId === paintGeneration) {
         statusEl.textContent = `${total} page${total === 1 ? '' : 's'} · scroll to read`;
+        root.removeAttribute('aria-busy');
       }
     }
 
+    let paintQueued = false;
     function schedulePaint() {
-      const width = Math.round(pagesEl.clientWidth || root.clientWidth || window.innerWidth);
-      if (width < 32 || width === lastWidth) return;
-      lastWidth = width;
-      paintAll(width).catch((err) => {
-        if (!alive() || isRenderingCancelled(err)) return;
-        statusEl.className = 'banner banner-error';
-        statusEl.innerHTML = `${icon('alert')}<div><strong>Could not display the PDF here.</strong><br>${escapeHtml(err.message)} Use Open PDF to view it in your browser.</div>`;
+      if (paintQueued) return;
+      paintQueued = true;
+      requestAnimationFrame(() => {
+        paintQueued = false;
+        if (!alive()) return;
+        const width = Math.round(pagesEl.clientWidth || root.clientWidth || window.innerWidth);
+        if (width < 32 || width === lastWidth) return;
+        lastWidth = width;
+        root.setAttribute('aria-busy', 'true');
+        paintAll(width).catch((err) => {
+          if (!alive() || isRenderingCancelled(err)) return;
+          root.removeAttribute('aria-busy');
+          statusEl.className = 'banner banner-error';
+          statusEl.innerHTML = `${icon('alert')}<div><strong>Could not display the PDF here.</strong><br>${escapeHtml(err.message)} Use Open PDF to view it in your browser.</div>`;
+        });
       });
     }
 
@@ -586,6 +617,7 @@ async function mountPdfViewer(root, url) {
     schedulePaint();
   } catch (err) {
     if (!alive()) return;
+    root.removeAttribute('aria-busy');
     statusEl.className = 'banner banner-error';
     statusEl.innerHTML = `${icon('alert')}<div><strong>Could not display the PDF here.</strong><br>${escapeHtml(err.message)} Use Open PDF to view it in your browser.</div>`;
   }
@@ -628,8 +660,7 @@ function renderPracticalFile() {
 async function renderLab(id, tab) {
   const lab = labs.find((l) => l.id === id);
   if (!lab) {
-    history.replaceState(null, '', '/');
-    renderHome();
+    renderNotFound(`No lab matches “${id}”.`);
     return;
   }
 
@@ -678,8 +709,11 @@ async function renderLab(id, tab) {
     await loadLabAssets(lab);
     runSetup(labSetup);
   } catch (err) {
-    document.getElementById('labPanel').innerHTML = `
-      <div class="banner banner-error">${icon('alert')}<div><strong>Could not load lab SQL.</strong><br>${escapeHtml(err.message)}</div></div>`;
+    const panel = document.getElementById('labPanel');
+    panel.innerHTML = `
+      <div class="banner banner-error">${icon('alert')}<div><strong>Could not load lab SQL.</strong><br>${escapeHtml(err.message)}</div></div>
+      ${recoveryActionsHtml()}`;
+    bindRecoveryActions(panel);
     return;
   }
 
@@ -833,7 +867,15 @@ function renderSchemaPanel() {
   const tables = listUserTables();
 
   if (!tables.length) {
-    panel.innerHTML = `<div class="empty-state">${icon('info')}<strong>No tables</strong><p>Reset the database from the SQL Playground tab.</p></div>`;
+    panel.innerHTML = `
+      <div class="empty-state">
+        ${icon('info')}
+        <strong>No tables</strong>
+        <p>Reset the database from the SQL Playground tab.</p>
+        <p class="recovery-actions">
+          <a class="btn btn-info btn-sm" href="${labHref(currentLab.id, 'sql')}">${icon('play')} SQL Playground</a>
+        </p>
+      </div>`;
     return;
   }
 
@@ -860,15 +902,37 @@ function renderSchemaPanel() {
 
 /* ── Init ────────────────────────────────────────────────── */
 
+function renderNotFound(detail) {
+  currentLab = null;
+  editorCM = null;
+  setPageTitle('Page not found');
+  document.getElementById('brandSub').textContent = 'SGT University · Semester 5';
+  renderTopbarActions(null);
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
+    <section class="hero">
+      <h1 class="page-title">This page isn’t here</h1>
+      <p class="hero-sub">${escapeHtml(detail || 'That link does not match a lab or the practical file.')}</p>
+      ${recoveryActionsHtml()}
+    </section>`;
+  bindRecoveryActions(main);
+}
+
 function showFatal(title, message) {
   const main = document.getElementById('main-content');
   document.getElementById('loadingShell')?.remove();
   if (!main) return;
+  setPageTitle(title);
   main.innerHTML = `
-    <div class="banner banner-error">${icon('alert')}<div>
-      <strong>${escapeHtml(title)}</strong><br>${escapeHtml(message)}
-      <br><small>Hard-refresh this page. Hub files must load from the site root (<code>/app.js</code>, <code>/styles.css</code>, <code>/labs.json</code>), not from <code>/lab/…</code>.</small>
-    </div></div>`;
+    <section class="hero">
+      <h1 class="page-title">${escapeHtml(title)}</h1>
+      <div class="banner banner-error" role="alert">${icon('alert')}<div>
+        ${escapeHtml(message)}
+        <br><small>Hard-refresh this page. Hub files must load from the site root (<code>/app.js</code>, <code>/styles.css</code>, <code>/labs.json</code>), not from <code>/lab/…</code>.</small>
+      </div></div>
+      ${recoveryActionsHtml()}
+    </section>`;
+  bindRecoveryActions(main);
 }
 
 async function render() {
@@ -880,6 +944,10 @@ async function render() {
   }
   if (route.view === 'practical') {
     renderPracticalFile();
+    return;
+  }
+  if (route.view === 'notfound') {
+    renderNotFound();
     return;
   }
   await renderLab(route.id, route.tab);

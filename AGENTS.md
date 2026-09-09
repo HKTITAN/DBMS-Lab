@@ -4,7 +4,7 @@ SGT University, Semester 5, Database Management Systems. Student: **Harshit Khem
 
 - Repo: https://github.com/HKTITAN/DBMS-Lab
 - Live: https://dbms-lab-sem5.khe.money/ (Vercel; also dbms-lab-sem5.vercel.app)
-- Push/merge **`main`** to deploy. Hub shell files (`index.html`, `app.js`, `styles.css`, `labs.json`) use `Cache-Control: max-age=0, must-revalidate` in `vercel.json`.
+- Push/merge **`main`** to deploy. Hub shell files (`index.html`, `app.js`, `styles.css`, `labs.json`) and SPA routes use `Cache-Control: max-age=0, must-revalidate` in `vercel.json`. PDFs and `.sql` files may use a longer `max-age` with `must-revalidate` (not `immutable` — filenames are not hashed).
 
 These are working notes for editing this tree. Do not break existing labs.
 
@@ -60,6 +60,12 @@ Routes: `/` (cards from `labs.json`), `/lab/<id>/<tab>` (`report` | `sql` | `sch
 **PDFs (Chrome on phones is the primary case — Android Chrome and iOS Chrome — plus desktop Chrome):** never `<iframe src="*.pdf">`. Use `mountPdfViewer` in `app.js`: lazy-load PDF.js, stacked canvases in **document** flow, canvases `pointer-events: none`, **Open PDF** (`target="_blank"`) + **Download**. Do not put `overflow: hidden`, `position: sticky` on PDF chrome, or a viewport-capped height on `.pdf-viewer` / `.pdf-pages` / `.content` / `.app`. `.content` is `flex: 1 0 auto`. Do not set `overflow` or `touch-action` on `html`/`body` (Chrome then nests a body scroller).
 
 Local: `npx serve .` (rewrites). `python -m http.server` only serves `/`.
+
+## Web UI
+
+Static vanilla HTML/CSS/JS on Vercel — do not convert to Next.js unless a task says so.
+
+Future UI changes should follow the [Vercel Web Interface Guidelines](https://vercel.com/design/guidelines) **and** the lab conventions in this file (PDF.js document-flow viewer, explicit SPA rewrites, Duolingo-ish look, SQLite-first labs). High-impact items for this hub: keyboard + visible `:focus-visible`, ≥44px hit targets on mobile, `touch-action: manipulation` on controls (never on `html`/`body`), URL as state, real `<a href>`, polite `aria-live` for toasts, `prefers-reduced-motion`, no `transition: all`, safe-area insets, skip link + heading hierarchy, named icon-only buttons, ellipsis `…` in loading copy, preconnect CDNs, lazy PDF.js, reserved space around PDF/embed frames.
 
 ## Conventions
 
