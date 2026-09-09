@@ -40,7 +40,7 @@ python -m http.server 8080  # home only unless you add the same rewrites
 | [19-08-2026](19-08-2026/) | Employee directory — schema, CRUD, views | Embedded in hub (`/lab/19-08-2026/…`) |
 | [26-08-2026](26-08-2026/) | CREATE TABLE & ALTER TABLE (rename column) | `employees.sql`, PDF report |
 | [02-09-2026](02-09-2026/) | SQL Joins (CROSS, NATURAL, INNER, OUTER, SELF) | `joins.sql`, PDF report |
-| [09-09-2026](09-09-2026/) | SELECT queries (DISTINCT, WHERE, BETWEEN, IN, ORDER BY) | `employee.sql`, PDF report |
+| [09-09-2026](09-09-2026/) | SELECT queries (DISTINCT, WHERE, BETWEEN, IN, ORDER BY) plus CSE/Mechanical UNION, UNION ALL, INTERSECT | `employee.sql`, PDF report |
 
 ## Regenerating PDF reports
 

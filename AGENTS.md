@@ -17,7 +17,7 @@ Dated lab folders `DD-MM-YYYY/` (same string as `labs.json` `id` / `folder`):
 | `19-08-2026/` | 1 | `directory` | Embedded mini-app: `index.html`, `app.js`, `styles.css`, `schema.sql`, `seed.sql` |
 | `26-08-2026/` | 2 | `sql` | `employees.sql`, `employees.sqlserver.sql`, `generate_report.py`, PDF report |
 | `02-09-2026/` | 3 | `sql` | `joins.sql`, `joins.sqlserver.sql`, `generate_report.py`, PDF report |
-| `09-09-2026/` | 4 | `sql` | `employee.sql`, `employee.sqlserver.sql`, `generate_report.py`, PDF report |
+| `09-09-2026/` | 4 | `sql` | `employee.sql`, `employee.sqlserver.sql`, `generate_report.py`, PDF report (SELECT + CSE/Mechanical UNION / UNION ALL / INTERSECT) |
 
 Hub (site root): `index.html`, `app.js`, `styles.css`, `labs.json`, `vercel.json`, `serve.json`.
 

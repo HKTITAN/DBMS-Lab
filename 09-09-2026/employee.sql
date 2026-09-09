@@ -2,6 +2,7 @@
 -- DBMS Lab · 09-09-2026
 -- Employee table: CREATE, seed 10 rows, then SELECT queries
 -- DISTINCT, WHERE, BETWEEN, IN, ORDER BY
+-- Then CSE / Mechanical student tables: UNION, UNION ALL, INTERSECT
 -- SQLite  (sql.js compiler / DB Browser / sqlite3)
 -- For the class SQL Server, run employee.sqlserver.sql instead.
 --
@@ -32,6 +33,16 @@
 --     ORDER BY employee names in descending order
 -- 13. Display the list of employees in ascending order from
 --     the employee table.
+-- 14. Create a table cse (CSE students) with roll no, student name, city
+-- 15. Insert 5 rows in the cse table
+-- 16. Create a table mechanical (Mechanical students) with the same attributes
+-- 17. Insert 5 rows in the mechanical table
+--     (two rows also appear in cse so INTERSECT is non-empty)
+-- 18. SELECT all the details from the cse table
+-- 19. SELECT all the details from the mechanical table
+-- 20. SELECT the UNION of cse and mechanical
+-- 21. SELECT the UNION ALL of cse and mechanical
+-- 22. SELECT the INTERSECT of cse and mechanical
 -- ============================================================
 
 DROP TABLE IF EXISTS employee;
@@ -172,3 +183,97 @@ ORDER BY employee_name DESC;
 SELECT *
 FROM employee
 ORDER BY employee_name ASC;
+
+-- ============================================================
+-- CSE / Mechanical student tables — UNION, UNION ALL, INTERSECT
+-- Compatible columns (roll_no, student_name, city). Two identical
+-- rows appear in both tables so INTERSECT returns a non-empty set.
+-- ============================================================
+
+DROP TABLE IF EXISTS cse;
+DROP TABLE IF EXISTS mechanical;
+
+-- ------------------------------------------------------------
+-- 14. Create a table cse (CSE students) with the following
+--     attributes: roll no, student name, city
+-- ------------------------------------------------------------
+CREATE TABLE cse (
+    roll_no        INTEGER PRIMARY KEY,
+    student_name   TEXT NOT NULL,
+    city           TEXT NOT NULL
+);
+
+-- ------------------------------------------------------------
+-- 15. Insert 5 rows in the cse table
+-- ------------------------------------------------------------
+INSERT INTO cse (roll_no, student_name, city)
+VALUES
+    (1, 'Amit Verma',   'Delhi'),
+    (2, 'Rahul Das',    'Kolkata'),
+    (3, 'Sneha Reddy',  'Hyderabad'),
+    (4, 'Isha Kapoor',  'Chandigarh'),
+    (5, 'Dev Patel',    'Ahmedabad');
+
+-- ------------------------------------------------------------
+-- 16. Create a table mechanical (Mechanical students) with the
+--     following attributes: roll no, student name, city
+-- ------------------------------------------------------------
+CREATE TABLE mechanical (
+    roll_no        INTEGER PRIMARY KEY,
+    student_name   TEXT NOT NULL,
+    city           TEXT NOT NULL
+);
+
+-- ------------------------------------------------------------
+-- 17. Insert 5 rows in the mechanical table
+--     Two rows match cse (Amit Verma / Delhi, Sneha Reddy / Hyderabad)
+-- ------------------------------------------------------------
+INSERT INTO mechanical (roll_no, student_name, city)
+VALUES
+    (1, 'Amit Verma',   'Delhi'),
+    (3, 'Sneha Reddy',  'Hyderabad'),
+    (6, 'Mohit Jain',   'Jaipur'),
+    (7, 'Kavya Menon',  'Kochi'),
+    (8, 'Tushar Rao',   'Nagpur');
+
+-- ------------------------------------------------------------
+-- 18. SELECT all the details from the cse table
+-- ------------------------------------------------------------
+-- All the details from CSE
+SELECT * FROM cse;
+
+-- ------------------------------------------------------------
+-- 19. SELECT all the details from the mechanical table
+-- ------------------------------------------------------------
+-- All the details from Mechanical
+SELECT * FROM mechanical;
+
+-- ------------------------------------------------------------
+-- 20. SELECT the UNION of cse and mechanical
+--     (unique rows from either table)
+-- ------------------------------------------------------------
+-- UNION of CSE and Mechanical
+SELECT * FROM cse
+UNION
+SELECT * FROM mechanical
+ORDER BY roll_no;
+
+-- ------------------------------------------------------------
+-- 21. SELECT the UNION ALL of cse and mechanical
+--     (all rows, including duplicates)
+-- ------------------------------------------------------------
+-- UNION ALL of CSE and Mechanical
+SELECT * FROM cse
+UNION ALL
+SELECT * FROM mechanical
+ORDER BY roll_no;
+
+-- ------------------------------------------------------------
+-- 22. SELECT the INTERSECT of cse and mechanical
+--     (rows that appear in both tables)
+-- ------------------------------------------------------------
+-- INTERSECT of CSE and Mechanical
+SELECT * FROM cse
+INTERSECT
+SELECT * FROM mechanical
+ORDER BY roll_no;
