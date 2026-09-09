@@ -448,6 +448,7 @@ async function openPdfDocument(pdfjsLib, url) {
   return { task, pdf };
 }
 
+/** Stacked canvases in document flow — Chrome Android/iOS + desktop; no PDF iframe. */
 async function mountPdfViewer(root, url) {
   stopPdfViewer();
   const session = pdfViewerSession;

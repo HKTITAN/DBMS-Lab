@@ -72,19 +72,18 @@
 
 html {
   -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
-  -webkit-overflow-scrolling: touch;
+  /* auto — smooth + 20+ canvases feels stuck on Chrome mobile */
+  scroll-behavior: auto;
   height: auto;
+  overflow: visible;
 }
 
 body {
   margin: 0;
   min-height: 100dvh;
   height: auto;
-  overflow-x: visible;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
+  /* Do not set overflow or touch-action here: Chrome (Android + iOS)
+     must use the viewport as the only scroller for stacked PDF pages. */
   background: var(--wall);
   color: var(--ink);
   font-family: var(--font-body);
@@ -222,7 +221,7 @@ button, .btn, .chip, .tab, .lab-card {
 
 .topbar-actions { display: flex; gap: var(--sp-2); }
 
-/* flex-basis:auto + no shrink so iOS Safari cannot trap PDF pages in a viewport-tall flex item */
+/* Grow with PDF pages; do not shrink to the viewport (Chrome mobile flex trap) */
 .content {
   flex: 1 0 auto;
   min-width: 0;
@@ -538,7 +537,7 @@ button, .btn, .chip, .tab, .lab-card {
   background: var(--paper);
 }
 
-/* In-page PDF.js viewer — pages stack in document flow so iOS Safari can scroll */
+/* In-page PDF.js viewer — stacked pages scroll with the document (Chrome mobile + desktop) */
 .pdf-actions {
   display: flex;
   flex-wrap: wrap;
@@ -568,7 +567,6 @@ button, .btn, .chip, .tab, .lab-card {
   max-height: none;
   overflow: visible;
   touch-action: pan-y;
-  -webkit-overflow-scrolling: touch;
 }
 .pdf-page {
   margin: 0;
@@ -838,14 +836,7 @@ table.data-table tbody tr:last-child td { border-bottom: none; }
   .tabbar { align-self: stretch; width: 100%; }
   .tab .tab-label { font-size: .8rem; }
   .embed-frame { height: min(65dvh, 680px); }
-  .pdf-actions {
-    width: 100%;
-    position: sticky;
-    top: calc(var(--sp-2) + var(--safe-top));
-    z-index: 20;
-    background: color-mix(in oklch, var(--wall) 92%, white);
-    padding: var(--sp-2) 0;
-  }
+  .pdf-actions { width: 100%; }
   .pdf-actions .btn { flex: 1 1 calc(50% - var(--sp-2)); }
   .pdf-page { border-radius: var(--r-lg); }
   .pdf-page canvas { border-radius: calc(var(--r-lg) - 2px); }

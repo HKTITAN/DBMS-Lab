@@ -8,18 +8,18 @@ Static SPA: `index.html` + `/app.js` + `/styles.css` + `/labs.json`. Path routin
 
 Hub scripts and styles **must stay root-absolute** (`/app.js`, `/styles.css`). Relative `href="app.js"` breaks after a refresh on `/lab/...`.
 
-## PDFs (iPhone)
+## PDFs (Chrome mobile, iOS Chrome, desktop)
 
-Do **not** embed PDFs with `<iframe src="*.pdf">` or a browser PDF plugin. iOS Safari and iOS Chrome often cannot touch-scroll that pattern, especially inside `overflow: hidden` + a fixed-height frame.
+Do **not** embed PDFs with `<iframe src="*.pdf">` or a browser PDF plugin. Chrome on phones (Android Chrome and iOS Chrome) and desktop Chrome’s plugin often cannot touch/wheel-scroll that pattern inside a clipped, fixed-height frame.
 
 Use `mountPdfViewer` in `app.js`:
 
 - Lazy-load PDF.js only when a PDF view opens
-- Render pages as stacked canvases in **document** flow (no nested iframe scroller)
-- Keep canvases `pointer-events: none` so finger-drag scrolls the page
+- Render pages as stacked canvases in **document** flow (the viewport is the only scroller — no `overflow` on `html`/`body`, no nested iframe)
+- Keep canvases `pointer-events: none` so a finger-drag scrolls the page
 - Always show **Open PDF** (`target="_blank"`) and **Download** as a native-viewer fallback
 
-Do not put `overflow: hidden` or a viewport-capped height on `.pdf-viewer`, `.pdf-pages`, `.content`, or `.app`. `.content` uses `flex: 1 0 auto` so iOS cannot trap the stack in a viewport-tall flex item.
+Do not put `overflow: hidden`, `position: sticky` on the PDF chrome, or a viewport-capped height on `.pdf-viewer`, `.pdf-pages`, `.content`, or `.app`. `.content` uses `flex: 1 0 auto` so Chrome cannot trap the stack in a viewport-tall flex item.
 
 ## Local
 
