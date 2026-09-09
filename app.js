@@ -460,7 +460,13 @@ async function mountPdfViewer(root, url) {
   try {
     const pdfjsLib = await loadPdfJs();
     if (!alive()) return;
-    loadingTask = pdfjsLib.getDocument({ url, withCredentials: false });
+    loadingTask = pdfjsLib.getDocument({
+      url,
+      withCredentials: false,
+      cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/cmaps/`,
+      cMapPacked: true,
+      standardFontDataUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/standard_fonts/`,
+    });
     pdf = await loadingTask.promise;
     if (!alive()) return;
 
@@ -523,7 +529,7 @@ async function mountPdfViewer(root, url) {
     }
 
     function schedulePaint() {
-      const width = Math.round(pagesEl.clientWidth);
+      const width = Math.round(pagesEl.clientWidth || root.clientWidth || window.innerWidth);
       if (width < 32 || width === lastWidth) return;
       lastWidth = width;
       paintAll(width).catch((err) => {
