@@ -427,6 +427,27 @@ function isRenderingCancelled(err) {
   return err && (err.name === 'RenderingCancelledException' || err.message === 'Rendering cancelled');
 }
 
+function pdfDocOptions() {
+  return {
+    cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/cmaps/`,
+    cMapPacked: true,
+    standardFontDataUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/standard_fonts/`,
+    isEvalSupported: false,
+    disableStream: true,
+    disableRange: true,
+    withCredentials: false,
+  };
+}
+
+async function openPdfDocument(pdfjsLib, url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load PDF (${res.status})`);
+  const data = await res.arrayBuffer();
+  const task = pdfjsLib.getDocument({ data, ...pdfDocOptions() });
+  const pdf = await task.promise;
+  return { task, pdf };
+}
+
 async function mountPdfViewer(root, url) {
   stopPdfViewer();
   const session = pdfViewerSession;
@@ -460,14 +481,13 @@ async function mountPdfViewer(root, url) {
   try {
     const pdfjsLib = await loadPdfJs();
     if (!alive()) return;
-    loadingTask = pdfjsLib.getDocument({
-      url,
-      withCredentials: false,
-      cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/cmaps/`,
-      cMapPacked: true,
-      standardFontDataUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/standard_fonts/`,
-    });
-    pdf = await loadingTask.promise;
+    const opened = await openPdfDocument(pdfjsLib, url);
+    if (!alive()) {
+      try { opened.pdf.destroy(); } catch (e) { /* noop */ }
+      return;
+    }
+    loadingTask = opened.task;
+    pdf = opened.pdf;
     if (!alive()) return;
 
     const total = pdf.numPages;
@@ -480,6 +500,7 @@ async function mountPdfViewer(root, url) {
       const canvas = document.createElement('canvas');
       canvas.setAttribute('role', 'img');
       canvas.setAttribute('aria-label', `Page ${n} of ${total}`);
+      canvas.style.pointerEvents = 'none';
       article.appendChild(canvas);
       pagesEl.appendChild(article);
     }

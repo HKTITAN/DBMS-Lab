@@ -29,8 +29,8 @@ Open [`index.html`](index.html) locally or run a static server to develop:
 ### Local server
 
 ```bash
-python -m http.server 8080
-# then open http://localhost:8080
+npx serve .                 # applies serve.json rewrites for /practical-file and /lab/*
+python -m http.server 8080  # home only unless you add the same rewrites
 ```
 
 ## Lab sessions
