@@ -167,6 +167,10 @@ function inferQueryLabel(stmt) {
   }
   if (upper.match(/FROM\s+EMPLOYEES[\s\S]*JOIN\s+EMPLOYEES/)) return 'Self join — employee to manager';
 
+  if (upper.includes('UNION ALL')) return 'UNION ALL of CSE and Mechanical';
+  if (upper.includes('INTERSECT')) return 'INTERSECT of CSE and Mechanical';
+  if (upper.includes('UNION')) return 'UNION of CSE and Mechanical';
+
   const fromMatch = upper.match(/FROM\s+(\w+)/);
   if (upper.startsWith('SELECT *') && fromMatch) {
     const table = fromMatch[1].toLowerCase();

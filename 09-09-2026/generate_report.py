@@ -171,6 +171,67 @@ QUESTIONS = [
             "employee table."
         ),
     },
+    {
+        "num": "14",
+        "html": (
+            f"Create a table {sql_kw('cse')} (CSE students) with the following "
+            "attributes:"
+        ),
+        "subitems": ["roll no", "student name", "city"],
+    },
+    {
+        "num": "15",
+        "html": f"Insert 5 rows in the {sql_kw('cse')} table.",
+    },
+    {
+        "num": "16",
+        "html": (
+            f"Create a table {sql_kw('mechanical')} (Mechanical students) with "
+            "the following attributes:"
+        ),
+        "subitems": ["roll no", "student name", "city"],
+    },
+    {
+        "num": "17",
+        "html": f"Insert 5 rows in the {sql_kw('mechanical')} table.",
+        "note": (
+            "Two rows also appear in <font face='Courier'>cse</font> "
+            "(Amit Verma / Delhi and Sneha Reddy / Hyderabad) so "
+            f"{sql_kw('INTERSECT')} is non-empty."
+        ),
+    },
+    {
+        "num": "18",
+        "html": f"{sql_kw('SELECT')} all the details from the {sql_kw('cse')} table.",
+    },
+    {
+        "num": "19",
+        "html": (
+            f"{sql_kw('SELECT')} all the details from the "
+            f"{sql_kw('mechanical')} table."
+        ),
+    },
+    {
+        "num": "20",
+        "html": (
+            f"{sql_kw('SELECT')} the {sql_kw('UNION')} of {sql_kw('cse')} and "
+            f"{sql_kw('mechanical')}."
+        ),
+    },
+    {
+        "num": "21",
+        "html": (
+            f"{sql_kw('SELECT')} the {sql_kw('UNION ALL')} of {sql_kw('cse')} "
+            f"and {sql_kw('mechanical')}."
+        ),
+    },
+    {
+        "num": "22",
+        "html": (
+            f"{sql_kw('SELECT')} the {sql_kw('INTERSECT')} of {sql_kw('cse')} "
+            f"and {sql_kw('mechanical')}."
+        ),
+    },
 ]
 
 SQL_SOLUTIONS = [
@@ -259,6 +320,65 @@ SQL_SOLUTIONS = [
         "SELECT *\n"
         "FROM employee\n"
         "ORDER BY employee_name ASC;",
+    ),
+    (
+        "14",
+        "CREATE TABLE cse (\n"
+        "    roll_no INTEGER PRIMARY KEY,\n"
+        "    student_name TEXT NOT NULL,\n"
+        "    city TEXT NOT NULL\n"
+        ");",
+    ),
+    (
+        "15",
+        "INSERT INTO cse (roll_no, student_name, city)\n"
+        "VALUES\n"
+        "    (1, 'Amit Verma',   'Delhi'),\n"
+        "    (2, 'Rahul Das',    'Kolkata'),\n"
+        "    (3, 'Sneha Reddy',  'Hyderabad'),\n"
+        "    (4, 'Isha Kapoor',  'Chandigarh'),\n"
+        "    (5, 'Dev Patel',    'Ahmedabad');",
+    ),
+    (
+        "16",
+        "CREATE TABLE mechanical (\n"
+        "    roll_no INTEGER PRIMARY KEY,\n"
+        "    student_name TEXT NOT NULL,\n"
+        "    city TEXT NOT NULL\n"
+        ");",
+    ),
+    (
+        "17",
+        "INSERT INTO mechanical (roll_no, student_name, city)\n"
+        "VALUES\n"
+        "    (1, 'Amit Verma',   'Delhi'),\n"
+        "    (3, 'Sneha Reddy',  'Hyderabad'),\n"
+        "    (6, 'Mohit Jain',   'Jaipur'),\n"
+        "    (7, 'Kavya Menon',  'Kochi'),\n"
+        "    (8, 'Tushar Rao',   'Nagpur');",
+    ),
+    ("18", "SELECT * FROM cse;"),
+    ("19", "SELECT * FROM mechanical;"),
+    (
+        "20",
+        "SELECT * FROM cse\n"
+        "UNION\n"
+        "SELECT * FROM mechanical\n"
+        "ORDER BY roll_no;",
+    ),
+    (
+        "21",
+        "SELECT * FROM cse\n"
+        "UNION ALL\n"
+        "SELECT * FROM mechanical\n"
+        "ORDER BY roll_no;",
+    ),
+    (
+        "22",
+        "SELECT * FROM cse\n"
+        "INTERSECT\n"
+        "SELECT * FROM mechanical\n"
+        "ORDER BY roll_no;",
     ),
 ]
 
@@ -353,7 +473,8 @@ def run_sql(sql_text: str) -> str:
             else:
                 kind = stmt.lstrip().split()[0].upper()
                 if kind == "INSERT":
-                    chunks.append(f"-- {conn.total_changes} row(s) inserted")
+                    n = cur.rowcount if cur.rowcount is not None and cur.rowcount >= 0 else conn.total_changes
+                    chunks.append(f"-- {n} row(s) inserted")
                 else:
                     chunks.append("-- OK")
                 chunks.append("")
@@ -601,9 +722,9 @@ def build_story(*, include_cover: bool = True) -> list:
     if include_cover:
         cover(
             st, "4",
-            "SELECT Queries — DISTINCT, WHERE, BETWEEN, IN, ORDER BY",
-            "SELECT, DISTINCT, WHERE, BETWEEN, IN, ORDER BY",
-            "employee — 10 sample rows × 8 attributes",
+            "SELECT Queries — DISTINCT, WHERE, BETWEEN, IN, ORDER BY, UNION, INTERSECT",
+            "SELECT, DISTINCT, WHERE, BETWEEN, IN, ORDER BY, UNION, UNION ALL, INTERSECT",
+            "employee (10 rows); cse and mechanical (5 students each, 2 shared)",
             LAB_DATE,
         )
 
@@ -615,7 +736,11 @@ def build_story(*, include_cover: bool = True) -> list:
         "<font face='Courier'>SELECT</font> queries "
         "(<font face='Courier'>DISTINCT</font>, <font face='Courier'>WHERE</font>, "
         "<font face='Courier'>BETWEEN</font>, <font face='Courier'>IN</font>, "
-        "<font face='Courier'>ORDER BY</font>)."
+        "<font face='Courier'>ORDER BY</font>). Then create compatible "
+        "<font face='Courier'>cse</font> and <font face='Courier'>mechanical</font> "
+        "student tables and combine them with "
+        "<font face='Courier'>UNION</font>, <font face='Courier'>UNION ALL</font>, "
+        "and <font face='Courier'>INTERSECT</font>."
     ))
 
     st.append(heading("2. Theory"))
@@ -671,13 +796,42 @@ def build_story(*, include_cover: bool = True) -> list:
         "<font face='Courier'>DESC</font> lists them Z→A. Sorting does not change "
         "stored rows; it only changes the order of the result set."
     ))
+    st.append(sub("2.7 UNION"))
+    st.append(para(
+        "<font face='Courier'>UNION</font> stacks two compatible "
+        "<font face='Courier'>SELECT</font> results and keeps each distinct row "
+        "once. Both sides must return the same number of columns with comparable "
+        "types. Duplicate rows that appear in both "
+        "<font face='Courier'>cse</font> and <font face='Courier'>mechanical</font> "
+        "are listed only once. Column names in the result come from the first "
+        "<font face='Courier'>SELECT</font>."
+    ))
+    st.append(sub("2.8 UNION ALL"))
+    st.append(para(
+        "<font face='Courier'>UNION ALL</font> also stacks two results but does "
+        "<b>not</b> remove duplicates. A row that exists in both tables appears "
+        "twice. Use it when every occurrence matters, or when the extra distinct "
+        "pass of <font face='Courier'>UNION</font> is unnecessary. Here five CSE "
+        "rows plus five Mechanical rows yield ten rows."
+    ))
+    st.append(sub("2.9 INTERSECT"))
+    st.append(para(
+        "<font face='Courier'>INTERSECT</font> keeps rows that appear in "
+        "<b>both</b> results. Entire rows must match "
+        "(<font face='Courier'>roll_no</font>, <font face='Courier'>student_name</font>, "
+        "and <font face='Courier'>city</font>). Amit Verma / Delhi and Sneha Reddy / "
+        "Hyderabad were inserted into both tables, so the intersection has two rows. "
+        "SQLite and SQL Server both support <font face='Courier'>INTERSECT</font>."
+    ))
 
     st.append(heading("3. Schema"))
     st.append(para(
-        "One table, <font face='Courier'>employee</font>, holds eight attributes. "
-        "<font face='Courier'>sr_no</font> is the employee number (primary key). "
-        "<font face='Courier'>manager</font> stores the manager's name, or "
-        "<font face='Courier'>NULL</font> for the top manager."
+        "Three tables. <font face='Courier'>employee</font> holds eight attributes "
+        "for questions 1–13. <font face='Courier'>sr_no</font> is the employee "
+        "number (primary key). <font face='Courier'>manager</font> stores the "
+        "manager's name, or <font face='Courier'>NULL</font> for the top manager. "
+        "<font face='Courier'>cse</font> and <font face='Courier'>mechanical</font> "
+        "are compatible three-column student lists for questions 14–22."
     ))
     st.append(table(
         [
@@ -694,6 +848,21 @@ def build_story(*, include_cover: bool = True) -> list:
         col_widths=[CONTENT_W * 0.22, CONTENT_W * 0.20, CONTENT_W * 0.24, CONTENT_W * 0.24],
         pad=4,
     ))
+    st.append(Spacer(1, 0.25 * cm))
+    st.append(para(
+        "<font face='Courier'>cse</font> and <font face='Courier'>mechanical</font> "
+        "share the same three attributes so they can be combined with set operators:"
+    ))
+    st.append(table(
+        [
+            ["Attribute", "Type", "Constraint", "Role"],
+            ["roll_no", "INTEGER", "PRIMARY KEY", "Student roll number"],
+            ["student_name", "TEXT", "NOT NULL", "Student name"],
+            ["city", "TEXT", "NOT NULL", "Home city"],
+        ],
+        col_widths=[CONTENT_W * 0.22, CONTENT_W * 0.20, CONTENT_W * 0.24, CONTENT_W * 0.24],
+        pad=4,
+    ))
 
     st.append(heading("4. Questions"))
     st.append(para(
@@ -702,16 +871,21 @@ def build_story(*, include_cover: bool = True) -> list:
         "here as <b>1(a)</b> and <b>1(b)</b>. Question 3 wrote "
         "&ldquo;distant&rdquo;; the SQL keyword is "
         f"{sql_kw('DISTINCT')}. Employee number is stored as "
-        f"{sql_kw('sr_no')}."
+        f"{sql_kw('sr_no')}. Questions <b>14–22</b> are the CSE / Mechanical "
+        f"{sql_kw('UNION')}, {sql_kw('UNION ALL')}, and {sql_kw('INTERSECT')} "
+        "exercise: create both student tables, list their rows, then combine them."
     ))
     st.extend(questions_flow())
 
     st.append(heading("5. Procedure"))
     st.append(para(
-        "Drop <font face='Courier'>employee</font> if it already exists so the "
+        "Drop <font face='Courier'>employee</font>, <font face='Courier'>cse</font>, "
+        "and <font face='Courier'>mechanical</font> if they already exist so the "
         "script can be re-run. Then answer each lab question in order. "
-        "City values are stored in title case (Delhi, Mumbai, &hellip;) and matched "
-        "with that same casing. The SQL for each question:"
+        "City values on <font face='Courier'>employee</font> are stored in title "
+        "case (Delhi, Mumbai, &hellip;) and matched with that same casing. "
+        "Set-operation results are ordered by <font face='Courier'>roll_no</font>. "
+        "The SQL for each question:"
     ))
     st.append(solutions_table())
 
@@ -735,8 +909,9 @@ def build_story(*, include_cover: bool = True) -> list:
 
     st.append(heading("8. Results"))
     st.append(para(
-        "Ten employees load successfully. Each lab question returns a non-empty "
-        "result on this seed data:"
+        "Ten employees load successfully, then five CSE students and five "
+        "Mechanical students. Each lab question returns a non-empty result on "
+        "this seed data:"
     ))
     st.append(table(
         [
@@ -755,6 +930,15 @@ def build_story(*, include_cover: bool = True) -> list:
             ["11", "4", "All details where city is not Mumbai, Delhi, or Chennai"],
             ["12", "10", "All details ordered by employee names descending"],
             ["13", "10", "List of employees in ascending order"],
+            ["14", "—", "Table cse created (roll no, student name, city)"],
+            ["15", "5", "5 CSE students inserted"],
+            ["16", "—", "Table mechanical created with the same attributes"],
+            ["17", "5", "5 Mechanical students inserted (2 rows also in cse)"],
+            ["18", "5", "All details from the cse table"],
+            ["19", "5", "All details from the mechanical table"],
+            ["20", "8", "UNION — unique rows from either table (5 + 5 − 2)"],
+            ["21", "10", "UNION ALL — all rows including the 2 duplicates"],
+            ["22", "2", "INTERSECT — Amit Verma / Delhi and Sneha Reddy / Hyderabad"],
         ],
         col_widths=[CONTENT_W * 0.16, CONTENT_W * 0.10, CONTENT_W * 0.64],
         pad=4,
@@ -764,7 +948,11 @@ def build_story(*, include_cover: bool = True) -> list:
         "Question 3 (<font face='Courier'>DISTINCT</font>) collapses ten department "
         "values to six unique numbers; question 4 lists all ten. Questions 8 and 9 "
         "partition salaries with no overlap (5 + 5 = 10). Question 11 keeps "
-        "Bangalore, Hyderabad, and Pune — cities that are not Mumbai, Delhi, or Chennai."
+        "Bangalore, Hyderabad, and Pune — cities that are not Mumbai, Delhi, or Chennai. "
+        "Questions 20–22 show the set-operator identities on this seed: "
+        "<font face='Courier'>UNION</font> has 8 rows, "
+        "<font face='Courier'>UNION ALL</font> has 10, and "
+        "<font face='Courier'>INTERSECT</font> has the 2 shared students."
     ))
 
     st.append(heading("9. Conclusion"))
@@ -776,8 +964,12 @@ def build_story(*, include_cover: bool = True) -> list:
         "&ldquo;which rows match this condition?&rdquo; "
         "<font face='Courier'>BETWEEN</font> and <font face='Courier'>IN</font> "
         "express ranges and lists clearly. <font face='Courier'>ORDER BY</font> "
-        "changes presentation only. Together these clauses are the core of "
-        "everyday retrieval in SQL."
+        "changes presentation only. "
+        "<font face='Courier'>UNION</font> / <font face='Courier'>UNION ALL</font> / "
+        "<font face='Courier'>INTERSECT</font> combine two compatible queries: "
+        "unique rows from either side, every row including duplicates, or only "
+        "rows common to both. Together these clauses are the core of everyday "
+        "retrieval in SQL."
     ))
     return st
 
