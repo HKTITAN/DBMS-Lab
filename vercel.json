@@ -4,7 +4,12 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/practical-file", "destination": "/index.html" },
-    { "source": "/lab/:id/:tab", "destination": "/index.html" },
+    { "source": "/lab/:id/report", "destination": "/index.html" },
+    { "source": "/lab/:id/sql", "destination": "/index.html" },
+    { "source": "/lab/:id/schema", "destination": "/index.html" },
+    { "source": "/lab/:id/departments", "destination": "/index.html" },
+    { "source": "/lab/:id/data", "destination": "/index.html" },
+    { "source": "/lab/:id/compiler", "destination": "/index.html" },
     { "source": "/lab/:id", "destination": "/index.html" }
   ],
   "headers": [
@@ -21,7 +26,31 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
-      "source": "/lab/:path*",
+      "source": "/lab/:id",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/report",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/sql",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/schema",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/departments",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/data",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
+    },
+    {
+      "source": "/lab/:id/compiler",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }]
     },
     {
