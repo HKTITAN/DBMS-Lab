@@ -2,7 +2,13 @@
   "rewrites": [
     { "source": "/practical-file", "destination": "/index.html" },
     { "source": "/practical-file/", "destination": "/index.html" },
-    { "source": "/lab/**", "destination": "/index.html" }
+    { "source": "/lab/:id/report", "destination": "/index.html" },
+    { "source": "/lab/:id/sql", "destination": "/index.html" },
+    { "source": "/lab/:id/schema", "destination": "/index.html" },
+    { "source": "/lab/:id/departments", "destination": "/index.html" },
+    { "source": "/lab/:id/data", "destination": "/index.html" },
+    { "source": "/lab/:id/compiler", "destination": "/index.html" },
+    { "source": "/lab/:id", "destination": "/index.html" }
   ],
   "headers": [
     {

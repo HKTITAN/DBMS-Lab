@@ -51,7 +51,7 @@ Rebuild the **standalone** PDF in the lab folder first, then the **compiled** pr
 
 ## Hub
 
-Static SPA. `vercel.json` / `serve.json` rewrite `/practical-file` and `/lab/:id/:tab` to `index.html`. Hub assets **must** be root-absolute (`/app.js`, `/styles.css`) plus `<base href="/">` so a refresh on `/lab/...` still boots.
+Static SPA. Hub assets **must** be root-absolute (`/app.js`, `/styles.css`) plus `<base href="/">`. SPA rewrites in `vercel.json` / `serve.json` list **known routes only** (`/practical-file`, `/lab/:id`, `/lab/:id/{report,sql,schema,departments,data,compiler}`). Never rewrite `*.css` / `*.js` / `*.json` / `*.pdf` / `DD-MM-YYYY/*` to `index.html` — `/lab/:id/:tab` would turn `/lab/09-09-2026/styles.css` into HTML and a refresh looks blank. If you add a hub tab, add its rewrite too.
 
 Routes: `/` (cards from `labs.json`), `/lab/<id>/<tab>` (`report` | `sql` | `schema`, or directory tabs), `/practical-file`.
 

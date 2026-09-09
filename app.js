@@ -250,11 +250,28 @@ function refreshHintTables() {
   editorCM.setOption('hintOptions', { tables: hints });
 }
 
+function responseLooksLikeHtml(res) {
+  const type = (res.headers.get('content-type') || '').toLowerCase();
+  return type.includes('text/html');
+}
+
 async function fetchText(path) {
   const url = assetUrl(path);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
+  if (responseLooksLikeHtml(res)) {
+    throw new Error(`${url} returned HTML instead of a file (SPA rewrite). Use a root-absolute path.`);
+  }
   return res.text();
+}
+
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Could not load ${url} (${res.status})`);
+  if (responseLooksLikeHtml(res)) {
+    throw new Error(`${url} returned HTML instead of JSON. Hard-refresh so /labs.json is not rewritten.`);
+  }
+  return res.json();
 }
 
 async function loadLabAssets(lab) {
@@ -442,6 +459,9 @@ function pdfDocOptions() {
 async function openPdfDocument(pdfjsLib, url) {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Could not load PDF (${res.status})`);
+  if (responseLooksLikeHtml(res)) {
+    throw new Error(`${url} returned HTML instead of a PDF. Use a root-absolute file path.`);
+  }
   const data = await res.arrayBuffer();
   const task = pdfjsLib.getDocument({ data, ...pdfDocOptions() });
   const pdf = await task.promise;
@@ -840,6 +860,17 @@ function renderSchemaPanel() {
 
 /* ── Init ────────────────────────────────────────────────── */
 
+function showFatal(title, message) {
+  const main = document.getElementById('main-content');
+  document.getElementById('loadingShell')?.remove();
+  if (!main) return;
+  main.innerHTML = `
+    <div class="banner banner-error">${icon('alert')}<div>
+      <strong>${escapeHtml(title)}</strong><br>${escapeHtml(message)}
+      <br><small>Hard-refresh this page. Hub files must load from the site root (<code>/app.js</code>, <code>/styles.css</code>, <code>/labs.json</code>), not from <code>/lab/…</code>.</small>
+    </div></div>`;
+}
+
 async function render() {
   stopPdfViewer();
   const route = parseRoute();
@@ -854,27 +885,34 @@ async function render() {
   await renderLab(route.id, route.tab);
 }
 
+let hubStarted = false;
+
 async function init() {
   try {
-    labs = await (await fetch('/labs.json')).json();
-  } catch (err) {
-    document.getElementById('main-content').innerHTML = `
-      <div class="banner banner-error">${icon('alert')}<div><strong>Could not load labs.json</strong><br>${escapeHtml(err.message)}</div></div>`;
-    return;
-  }
-
-  try {
+    if (typeof initSqlJs !== 'function') {
+      throw new Error('sql.js did not load. Check the network, then hard-refresh.');
+    }
+    labs = await fetchJson('/labs.json');
+    if (!Array.isArray(labs)) throw new Error('labs.json is not an array.');
     SQLmod = await initSqlJs({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/sql.js@1.14.2/dist/${f}` });
   } catch (err) {
-    document.getElementById('main-content').innerHTML = `
-      <div class="banner banner-error">${icon('alert')}<div><strong>Could not start sql.js</strong><br>${escapeHtml(err.message)}<br><small>Check your internet connection and reload.</small></div></div>`;
+    showFatal('Could not start the lab hub', err.message);
     return;
   }
 
   document.getElementById('loadingShell')?.remove();
-  window.addEventListener('popstate', render);
-  document.addEventListener('click', onDocumentClick);
-  await render();
+  if (!hubStarted) {
+    hubStarted = true;
+    window.addEventListener('popstate', () => {
+      render().catch((err) => showFatal('Could not open this page', err.message));
+    });
+    document.addEventListener('click', onDocumentClick);
+  }
+  try {
+    await render();
+  } catch (err) {
+    showFatal('Could not open this page', err.message);
+  }
 }
 
 function onDocumentClick(event) {
@@ -888,7 +926,7 @@ function onDocumentClick(event) {
   if (path === location.pathname.replace(/\/$/, '') && url.search === location.search) return;
   event.preventDefault();
   history.pushState(null, '', path + url.search + url.hash);
-  render();
+  render().catch((err) => showFatal('Could not open this page', err.message));
 }
 
 document.addEventListener('DOMContentLoaded', init);
