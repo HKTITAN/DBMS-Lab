@@ -10,6 +10,8 @@ Each lab has its own page with in-app tabs — no external redirects:
 
 | Route | Lab |
 |-------|-----|
+| `/lab/09-09-2026/report` | SELECT Queries — PDF report |
+| `/lab/09-09-2026/sql` | SELECT Queries — playground |
 | `/lab/02-09-2026/report` | SQL Joins — PDF report |
 | `/lab/02-09-2026/sql` | SQL Joins — playground |
 | `/lab/26-08-2026/report` | CREATE & ALTER TABLE — PDF |
@@ -38,12 +40,14 @@ python -m http.server 8080
 | [19-08-2026](19-08-2026/) | Employee directory — schema, CRUD, views | Embedded in hub (`/lab/19-08-2026/…`) |
 | [26-08-2026](26-08-2026/) | CREATE TABLE & ALTER TABLE (rename column) | `employees.sql`, PDF report |
 | [02-09-2026](02-09-2026/) | SQL Joins (CROSS, NATURAL, INNER, OUTER, SELF) | `joins.sql`, PDF report |
+| [09-09-2026](09-09-2026/) | SELECT queries (DISTINCT, WHERE, BETWEEN, IN, ORDER BY) | `employee.sql`, PDF report |
 
 ## Regenerating PDF reports
 
 ```bash
 cd 26-08-2026 && python generate_report.py
 cd 02-09-2026 && python generate_report.py
+cd 09-09-2026 && python generate_report.py
 python generate_practical_file.py   # merged DBMS_Practical_File.pdf
 ```
 

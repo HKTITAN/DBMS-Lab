@@ -96,6 +96,12 @@ EXPERIMENTS = [
         "date": "02 Sep 2026",
         "report": ROOT / "02-09-2026" / "DBMS_Lab_Joins_Report.pdf",
     },
+    {
+        "no": "4",
+        "title": "SELECT Queries",
+        "date": "09 Sep 2026",
+        "report": ROOT / "09-09-2026" / "DBMS_Lab_Employee_Select_Report.pdf",
+    },
 ]
 
 _base = getSampleStyleSheet()
@@ -423,6 +429,10 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
     emp.STUDENT["name"] = STUDENT["name"]
     emp.STUDENT["roll"] = STUDENT["roll"]
 
+    selects = load_lab_report("09-09-2026")
+    selects.STUDENT["name"] = STUDENT["name"]
+    selects.STUDENT["roll"] = STUDENT["roll"]
+
     tmp_dir = None
     if rebuild_standalone:
         exp2_pdf = EXPERIMENTS[1]["report"]
@@ -431,6 +441,7 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
                 f"Missing report: {exp2_pdf}. Run generate_report.py in 26-08-2026 first."
             )
         joins.build()
+        selects.build()
     else:
         tmp_dir = tempfile.TemporaryDirectory()
         emp.OUT_PDF = Path(tmp_dir.name) / "employees.pdf"
@@ -458,6 +469,13 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
             include_cover=False
         )
         writer.append(PdfReader(io.BytesIO(build_pdf_bytes(exp3_story))))
+
+        # Experiment 4 — banner on the same page as Aim (no blank title sheet)
+        exp4 = EXPERIMENTS[3]
+        exp4_story = experiment_banner(exp4["no"], exp4["title"]) + selects.build_story(
+            include_cover=False
+        )
+        writer.append(PdfReader(io.BytesIO(build_pdf_bytes(exp4_story))))
 
         with dest.open("wb") as f:
             writer.write(f)
