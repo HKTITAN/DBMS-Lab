@@ -1,12 +1,26 @@
 [
   {
+    "id": "30-09-2026-2",
+    "folder": "30-09-2026-2",
+    "date": "30 Sep 2026",
+    "experiment": "6",
+    "title": "Nested Queries",
+    "subtitle": "Subqueries, IN, NOT IN, EXISTS",
+    "topic": "Lab questions: nested queries on employee — above-average salary, highest per department, 2nd highest salary, IN, NOT IN, EXISTS, correlated subquery.",
+    "type": "sql",
+    "sqlFile": "employee.sql",
+    "report": "DBMS_Lab_Nested_Queries_Report.pdf",
+    "color": "#C026D3",
+    "defaultTab": "report"
+  },
+  {
     "id": "30-09-2026",
     "folder": "30-09-2026",
     "date": "30 Sep 2026",
     "experiment": "5",
-    "title": "Aggregates & Nested Queries",
+    "title": "Aggregate Functions",
     "subtitle": "SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING",
-    "topic": "Lab questions: CREATE employee, insert 16 rows, then aggregate functions and nested queries (subqueries, IN, NOT IN, EXISTS).",
+    "topic": "Lab questions: CREATE employee, insert 16 rows, then SUM, AVG, MAX, MIN, COUNT, GROUP BY and HAVING.",
     "type": "sql",
     "sqlFile": "employee.sql",
     "report": "DBMS_Lab_Aggregates_Report.pdf",

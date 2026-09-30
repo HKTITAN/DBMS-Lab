@@ -104,9 +104,15 @@ EXPERIMENTS = [
     },
     {
         "no": "5",
-        "title": "Aggregates & Nested Queries",
+        "title": "Aggregate Functions",
         "date": "30 Sep 2026",
         "report": ROOT / "30-09-2026" / "DBMS_Lab_Aggregates_Report.pdf",
+    },
+    {
+        "no": "6",
+        "title": "Nested Queries",
+        "date": "30 Sep 2026",
+        "report": ROOT / "30-09-2026-2" / "DBMS_Lab_Nested_Queries_Report.pdf",
     },
 ]
 
@@ -443,6 +449,10 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
     aggregates.STUDENT["name"] = STUDENT["name"]
     aggregates.STUDENT["roll"] = STUDENT["roll"]
 
+    nested = load_lab_report("30-09-2026-2")
+    nested.STUDENT["name"] = STUDENT["name"]
+    nested.STUDENT["roll"] = STUDENT["roll"]
+
     tmp_dir = None
     if rebuild_standalone:
         exp2_pdf = EXPERIMENTS[1]["report"]
@@ -453,6 +463,7 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
         joins.build()
         selects.build()
         aggregates.build()
+        nested.build()
     else:
         tmp_dir = tempfile.TemporaryDirectory()
         emp.OUT_PDF = Path(tmp_dir.name) / "employees.pdf"
@@ -494,6 +505,13 @@ def merge_reports(*, out: Path | None = None, rebuild_standalone: bool = True) -
             include_cover=False
         )
         writer.append(PdfReader(io.BytesIO(build_pdf_bytes(exp5_story))))
+
+        # Experiment 6 — banner on the same page as Aim (no blank title sheet)
+        exp6 = EXPERIMENTS[5]
+        exp6_story = experiment_banner(exp6["no"], exp6["title"]) + nested.build_story(
+            include_cover=False
+        )
+        writer.append(PdfReader(io.BytesIO(build_pdf_bytes(exp6_story))))
 
         with dest.open("wb") as f:
             writer.write(f)

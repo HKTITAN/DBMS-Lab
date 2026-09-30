@@ -2,7 +2,7 @@
 DBMS Lab — 30-09-2026
 =====================
 
-Builds `DBMS_Lab_Aggregates_Report.pdf` from `employee.sql` (SQLite).
+Builds `DBMS_Lab_Nested_Queries_Report.pdf` from `employee.sql` (SQLite).
 
 Run
 ---
@@ -35,7 +35,7 @@ from reportlab.platypus import (
 
 ROOT = Path(__file__).resolve().parent
 SQL_PATH = ROOT / "employee.sql"
-OUT_PDF = ROOT / "DBMS_Lab_Aggregates_Report.pdf"
+OUT_PDF = ROOT / "DBMS_Lab_Nested_Queries_Report.pdf"
 
 STUDENT = {
     "name": "Harshit Khemani",
@@ -86,85 +86,76 @@ QUESTIONS = [
         "num": "2",
         "html": "Insert 16 rows in the above mentioned table.",
         "note": (
-            "Four departments: CSE (5), Mechanical (4), ECE (4) and Civil (3). "
-            "Salaries are spread so each aggregate and each "
-            f"{sql_kw('HAVING')} filter returns a different set. "
-            "Five cities have two employees; the other cities have one."
+            "Same 16 rows as Experiment 5. Civil has no Professor, so "
+            f"{sql_kw('NOT IN')} is non-empty. The highest salary (92000) and "
+            "the second-highest salary (90000) are each earned by one employee. "
+            "Neha Gupta (ECE, 58000) is above the company average and below "
+            "the ECE average."
         ),
     },
     {
         "num": "3",
         "html": (
-            "Display the total number of employees from the employee table "
-            f"using {sql_kw('COUNT')}."
+            "Display the employee name, department and salary of employees who "
+            "earn more than the average salary, using a nested query."
         ),
     },
     {
         "num": "4",
         "html": (
-            "Display the number of distinct departments from the employee table "
-            f"using {sql_kw('COUNT')}."
+            "Display the employee with the highest salary in each department "
+            "using a subquery."
         ),
     },
     {
         "num": "5",
-        "html": (
-            "Display the total salary of all employees from the employee table "
-            f"using {sql_kw('SUM')}."
-        ),
+        "html": "Find the 2nd highest salary of the employees.",
     },
     {
         "num": "6",
         "html": (
-            "Display the average salary of all employees from the employee table "
-            f"using {sql_kw('AVG')}."
+            "Display employees who work in a department that has a Professor, "
+            f"using {sql_kw('IN')} and a subquery."
         ),
     },
     {
         "num": "7",
         "html": (
-            "Display the maximum and minimum salary from the employee table "
-            f"using {sql_kw('MAX')} and {sql_kw('MIN')}."
+            "Display employees who do not work in a department that has a "
+            f"Professor, using {sql_kw('NOT IN')} and a subquery."
+        ),
+        "note": (
+            f"{sql_kw('department')} is {sql_kw('NOT NULL')}, so the subquery "
+            "cannot return NULL. A NULL in a "
+            f"{sql_kw('NOT IN')} list would make the predicate unknown for every row."
         ),
     },
     {
         "num": "8",
         "html": (
-            "Display the number of employees, total salary, average salary, "
-            "highest salary and lowest salary of each department using "
-            f"{sql_kw('COUNT')}, {sql_kw('SUM')}, {sql_kw('AVG')}, "
-            f"{sql_kw('MAX')}, {sql_kw('MIN')} and {sql_kw('GROUP BY')}."
+            "Display employees for whom there exists a higher-paid colleague "
+            "in the same department, using "
+            f"{sql_kw('EXISTS')}."
         ),
     },
     {
         "num": "9",
         "html": (
-            "Display the department and average salary of departments whose "
-            "average salary is greater than 55000 using "
-            f"{sql_kw('GROUP BY')} and {sql_kw('HAVING')}."
+            "Display employees who earn more than the average salary of their "
+            "own department, using a correlated subquery."
+        ),
+        "note": (
+            "The comparison is strict. Rahul Das earns exactly the Civil "
+            "average (45000), so this question does not list him. Neha Gupta "
+            "is above the company average and below the ECE average, so she "
+            "is in question 3 and not in this question."
         ),
     },
     {
         "num": "10",
         "html": (
-            "Display the department and the number of employees for departments "
-            "that have more than 3 employees using "
-            f"{sql_kw('GROUP BY')} and {sql_kw('HAVING')}."
-        ),
-    },
-    {
-        "num": "11",
-        "html": (
-            "Display the number of employees, total salary and average salary "
-            f"of the CSE department using {sql_kw('WHERE')} with "
-            f"{sql_kw('COUNT')}, {sql_kw('SUM')} and {sql_kw('AVG')}."
-        ),
-    },
-    {
-        "num": "12",
-        "html": (
-            "Display the cities that have more than one employee using "
-            f"{sql_kw('GROUP BY')} and {sql_kw('HAVING')}."
+            "Display the department whose total salary is the greatest, "
+            "using a nested query."
         ),
     },
 ]
@@ -203,62 +194,89 @@ SQL_SOLUTIONS = [
         "    (15, 'Rahul Das',     'Assistant Professor', 'Civil',      45000.00, 'Kolkata'),\n"
         "    (16, 'Tushar Rao',    'Lab Instructor',      'Civil',      30000.00, 'Nagpur');",
     ),
-    ("3", "SELECT COUNT(*) AS employee_count\nFROM employee;"),
-    ("4", "SELECT COUNT(DISTINCT department) AS department_count\nFROM employee;"),
-    ("5", "SELECT SUM(salary) AS total_salary\nFROM employee;"),
-    ("6", "SELECT AVG(salary) AS average_salary\nFROM employee;"),
+    (
+        "3",
+        "SELECT employee_name, department, salary\n"
+        "FROM employee\n"
+        "WHERE salary > (SELECT AVG(salary) FROM employee)\n"
+        "ORDER BY salary DESC;",
+    ),
+    (
+        "4",
+        "SELECT e.employee_name, e.department, e.salary\n"
+        "FROM employee AS e\n"
+        "WHERE e.salary = (\n"
+        "    SELECT MAX(c.salary)\n"
+        "    FROM employee AS c\n"
+        "    WHERE c.department = e.department\n"
+        ")\n"
+        "ORDER BY e.department;",
+    ),
+    (
+        "5",
+        "SELECT MAX(salary)\n"
+        "FROM employee\n"
+        "WHERE salary < (SELECT MAX(salary) FROM employee);",
+    ),
+    (
+        "6",
+        "SELECT employee_name, job, department, salary\n"
+        "FROM employee\n"
+        "WHERE department IN (\n"
+        "    SELECT department\n"
+        "    FROM employee\n"
+        "    WHERE job = 'Professor'\n"
+        ")\n"
+        "ORDER BY department, employee_name;",
+    ),
     (
         "7",
-        "SELECT MAX(salary) AS maximum_salary,\n"
-        "       MIN(salary) AS minimum_salary\n"
-        "FROM employee;",
+        "SELECT employee_name, job, department, salary\n"
+        "FROM employee\n"
+        "WHERE department NOT IN (\n"
+        "    SELECT department\n"
+        "    FROM employee\n"
+        "    WHERE job = 'Professor'\n"
+        ")\n"
+        "ORDER BY department, employee_name;",
     ),
     (
         "8",
-        "SELECT department,\n"
-        "       COUNT(*)    AS employee_count,\n"
-        "       SUM(salary) AS total_salary,\n"
-        "       AVG(salary) AS average_salary,\n"
-        "       MAX(salary) AS highest_salary,\n"
-        "       MIN(salary) AS lowest_salary\n"
-        "FROM employee\n"
-        "GROUP BY department\n"
-        "ORDER BY department;",
+        "SELECT e.employee_name, e.department, e.salary\n"
+        "FROM employee AS e\n"
+        "WHERE EXISTS (\n"
+        "    SELECT 1\n"
+        "    FROM employee AS c\n"
+        "    WHERE c.department = e.department\n"
+        "      AND c.salary > e.salary\n"
+        ")\n"
+        "ORDER BY e.department, e.salary DESC;",
     ),
     (
         "9",
-        "SELECT department,\n"
-        "       AVG(salary) AS average_salary\n"
-        "FROM employee\n"
-        "GROUP BY department\n"
-        "HAVING AVG(salary) > 55000\n"
-        "ORDER BY department;",
+        "SELECT e.employee_name, e.department, e.salary\n"
+        "FROM employee AS e\n"
+        "WHERE e.salary > (\n"
+        "    SELECT AVG(d.salary)\n"
+        "    FROM employee AS d\n"
+        "    WHERE d.department = e.department\n"
+        ")\n"
+        "ORDER BY e.department, e.salary DESC;",
     ),
     (
         "10",
         "SELECT department,\n"
-        "       COUNT(*) AS employee_count\n"
+        "       SUM(salary) AS total_salary\n"
         "FROM employee\n"
         "GROUP BY department\n"
-        "HAVING COUNT(*) > 3\n"
-        "ORDER BY department;",
-    ),
-    (
-        "11",
-        "SELECT COUNT(*)    AS employee_count,\n"
-        "       SUM(salary) AS total_salary,\n"
-        "       AVG(salary) AS average_salary\n"
-        "FROM employee\n"
-        "WHERE department = 'CSE';",
-    ),
-    (
-        "12",
-        "SELECT city,\n"
-        "       COUNT(*) AS employee_count\n"
-        "FROM employee\n"
-        "GROUP BY city\n"
-        "HAVING COUNT(*) > 1\n"
-        "ORDER BY city;",
+        "HAVING SUM(salary) = (\n"
+        "    SELECT MAX(total_salary)\n"
+        "    FROM (\n"
+        "        SELECT SUM(salary) AS total_salary\n"
+        "        FROM employee\n"
+        "        GROUP BY department\n"
+        "    ) AS dept_totals\n"
+        ");",
     ),
 ]
 
@@ -342,57 +360,83 @@ def assert_results(conn: sqlite3.Connection) -> None:
     one = lambda sql: conn.execute(sql).fetchone()
     all_rows = lambda sql: conn.execute(sql).fetchall()
 
-    count, total, average, maximum, minimum = one(
-        "SELECT COUNT(*), SUM(salary), AVG(salary), MAX(salary), MIN(salary) FROM employee"
-    )
-    if (count, total, average, maximum, minimum) != (16, 898000, 56125.0, 92000, 28000):
-        raise AssertionError(
-            f"overall aggregates changed: {(count, total, average, maximum, minimum)}"
-        )
-    if one("SELECT COUNT(DISTINCT department) FROM employee") != (4,):
-        raise AssertionError("distinct department count changed")
+    if one("SELECT COUNT(*), AVG(salary) FROM employee") != (16, 56125.0):
+        raise AssertionError("seed aggregates changed")
 
-    by_dept = all_rows(
-        "SELECT department, COUNT(*), SUM(salary), AVG(salary), MAX(salary), MIN(salary) "
-        "FROM employee GROUP BY department ORDER BY department"
+    above = all_rows(
+        "SELECT employee_name FROM employee "
+        "WHERE salary > (SELECT AVG(salary) FROM employee) ORDER BY salary DESC"
     )
-    expected_dept = [
-        ("CSE", 5, 296000, 59200.0, 92000, 28000),
-        ("Civil", 3, 135000, 45000.0, 60000, 30000),
-        ("ECE", 4, 235000, 58750.0, 90000, 36000),
-        ("Mechanical", 4, 232000, 58000.0, 88000, 32000),
-    ]
-    if by_dept != expected_dept:
-        raise AssertionError(f"department aggregates changed: {by_dept}")
-
-    having_avg = all_rows(
-        "SELECT department, AVG(salary) FROM employee GROUP BY department "
-        "HAVING AVG(salary) > 55000 ORDER BY department"
-    )
-    if having_avg != [("CSE", 59200.0), ("ECE", 58750.0), ("Mechanical", 58000.0)]:
-        raise AssertionError(f"HAVING average changed: {having_avg}")
-
-    having_count = all_rows(
-        "SELECT department, COUNT(*) FROM employee GROUP BY department "
-        "HAVING COUNT(*) > 3 ORDER BY department"
-    )
-    if having_count != [("CSE", 5), ("ECE", 4), ("Mechanical", 4)]:
-        raise AssertionError(f"HAVING count changed: {having_count}")
-
-    cse = one(
-        "SELECT COUNT(*), SUM(salary), AVG(salary) FROM employee WHERE department = 'CSE'"
-    )
-    if cse != (5, 296000, 59200.0):
-        raise AssertionError(f"CSE aggregates changed: {cse}")
-
-    cities = all_rows(
-        "SELECT city, COUNT(*) FROM employee GROUP BY city "
-        "HAVING COUNT(*) > 1 ORDER BY city"
-    )
-    if cities != [
-        ("Bangalore", 2), ("Chennai", 2), ("Delhi", 2), ("Hyderabad", 2), ("Mumbai", 2),
+    if [r[0] for r in above] != [
+        "Rajesh Kumar", "Priya Nair", "Vikram Singh", "Ananya Sharma",
+        "Rohan Mehta", "Sneha Reddy", "Neha Gupta",
     ]:
-        raise AssertionError(f"city counts changed: {cities}")
+        raise AssertionError(f"above-average names changed: {above}")
+
+    tops = all_rows(
+        "SELECT e.employee_name, e.department FROM employee AS e "
+        "WHERE e.salary = (SELECT MAX(c.salary) FROM employee AS c "
+        "WHERE c.department = e.department) ORDER BY e.department"
+    )
+    if tops != [
+        ("Rajesh Kumar", "CSE"),
+        ("Sneha Reddy", "Civil"),
+        ("Priya Nair", "ECE"),
+        ("Vikram Singh", "Mechanical"),
+    ]:
+        raise AssertionError(f"department maxima changed: {tops}")
+
+    second = one(
+        "SELECT MAX(salary) FROM employee "
+        "WHERE salary < (SELECT MAX(salary) FROM employee)"
+    )
+    if second != (90000,):
+        raise AssertionError(f"second-highest changed: {second}")
+
+    in_prof = one(
+        "SELECT COUNT(*) FROM employee WHERE department IN "
+        "(SELECT department FROM employee WHERE job = 'Professor')"
+    )[0]
+    not_in = all_rows(
+        "SELECT employee_name FROM employee WHERE department NOT IN "
+        "(SELECT department FROM employee WHERE job = 'Professor') "
+        "ORDER BY employee_name"
+    )
+    if in_prof != 13 or [r[0] for r in not_in] != ["Rahul Das", "Sneha Reddy", "Tushar Rao"]:
+        raise AssertionError(f"IN/NOT IN changed: {in_prof}, {not_in}")
+
+    exists_n = one(
+        "SELECT COUNT(*) FROM employee AS e WHERE EXISTS ("
+        "SELECT 1 FROM employee AS c WHERE c.department = e.department "
+        "AND c.salary > e.salary)"
+    )[0]
+    if exists_n != 12:
+        raise AssertionError(f"EXISTS count changed: {exists_n}")
+
+    corr = all_rows(
+        "SELECT e.employee_name, e.department FROM employee AS e "
+        "WHERE e.salary > (SELECT AVG(d.salary) FROM employee AS d "
+        "WHERE d.department = e.department) "
+        "ORDER BY e.department, e.salary DESC"
+    )
+    if corr != [
+        ("Rajesh Kumar", "CSE"),
+        ("Ananya Sharma", "CSE"),
+        ("Sneha Reddy", "Civil"),
+        ("Priya Nair", "ECE"),
+        ("Vikram Singh", "Mechanical"),
+        ("Rohan Mehta", "Mechanical"),
+    ]:
+        raise AssertionError(f"correlated average changed: {corr}")
+
+    top_dept = one(
+        "SELECT department, SUM(salary) FROM employee GROUP BY department "
+        "HAVING SUM(salary) = (SELECT MAX(total_salary) FROM ("
+        "SELECT SUM(salary) AS total_salary FROM employee GROUP BY department"
+        ") AS dept_totals)"
+    )
+    if top_dept != ("CSE", 296000):
+        raise AssertionError(f"greatest department total changed: {top_dept}")
 
 
 def run_sql(sql_text: str) -> str:
@@ -660,76 +704,90 @@ def build_story(*, include_cover: bool = True) -> list:
     st: list = []
     if include_cover:
         cover(
-            st, "5",
-            "Aggregate Functions",
-            "SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING",
-            "employee (16 rows; CSE, Mechanical, ECE, Civil)",
+            st, "6",
+            "Nested Queries",
+            "Subqueries, IN, NOT IN, EXISTS, correlated subqueries",
+            "employee (16 rows; same seed as Experiment 5)",
             LAB_DATE,
         )
 
     st.append(heading("1. Aim"))
     st.append(para(
-        "To create an <font face='Courier'>employee</font> table, insert 16 rows "
-        "across four departments, and answer the lab questions with aggregate "
-        "functions: <font face='Courier'>COUNT</font>, <font face='Courier'>SUM</font>, "
-        "<font face='Courier'>AVG</font>, <font face='Courier'>MAX</font> and "
-        "<font face='Courier'>MIN</font>, including <font face='Courier'>GROUP BY</font> "
-        "and <font face='Courier'>HAVING</font>. Nested queries are Experiment 6."
+        "To create the same <font face='Courier'>employee</font> table used in "
+        "Experiment 5, insert the same 16 rows, and answer the lab questions "
+        "with nested queries: a scalar subquery, the highest salary in each "
+        "department, the second-highest salary, <font face='Courier'>IN</font> / "
+        "<font face='Courier'>NOT IN</font>, <font face='Courier'>EXISTS</font>, "
+        "a correlated department average, and the department with the greatest "
+        "total salary."
     ))
 
     st.append(heading("2. Theory"))
-    st.append(sub("2.1 Aggregate functions"))
+    st.append(sub("2.1 Scalar subqueries"))
     st.append(para(
-        "An aggregate function computes one value from many rows. "
-        "<font face='Courier'>COUNT(*)</font> counts rows. "
-        "<font face='Courier'>SUM(salary)</font> adds the salary column. "
-        "<font face='Courier'>AVG(salary)</font> is the arithmetic mean. "
-        "<font face='Courier'>MAX</font> and <font face='Courier'>MIN</font> return "
-        "the largest and smallest values. Without <font face='Courier'>GROUP BY</font>, "
-        "each aggregate covers the whole table and the query returns one row. "
-        "SQLite prints this table's average as 56125.0 because "
-        "<font face='Courier'>AVG</font> returns a real number even when the mean "
-        "is a whole number of rupees. <font face='Courier'>SUM</font> of these "
-        "whole-number salaries prints as the integer 898000."
+        "A subquery is a <font face='Courier'>SELECT</font> inside another "
+        "statement. A scalar subquery returns one value and can be compared "
+        "with <font face='Courier'>&gt;</font> or <font face='Courier'>=</font>. "
+        "Question 3 compares each salary with the single overall average, "
+        "56125.0. That inner query does not mention the outer row, so it is "
+        "uncorrelated and can be computed once."
     ))
-    st.append(sub("2.2 COUNT and COUNT DISTINCT"))
+    st.append(sub("2.2 IN and NOT IN"))
     st.append(para(
-        "<font face='Courier'>COUNT(*)</font> counts rows, so question 3 returns 16. "
-        "<font face='Courier'>COUNT(DISTINCT department)</font> counts different "
-        "values of that column. Ten of the sixteen rows repeat a department name, "
-        "so question 4 returns 4: CSE, Mechanical, ECE and Civil."
+        "<font face='Courier'>IN (subquery)</font> keeps an outer row when its "
+        "value appears in the inner result. Question 6 keeps employees whose "
+        "department is one of the departments that contain a Professor "
+        "(CSE, Mechanical, ECE). <font face='Courier'>NOT IN</font> is the "
+        "complement: question 7 keeps Civil, the only department with no "
+        "Professor. If the subquery could return <font face='Courier'>NULL</font>, "
+        "<font face='Courier'>NOT IN</font> would be unknown for every row and "
+        "the result would be empty. Here <font face='Courier'>department</font> "
+        "is <font face='Courier'>NOT NULL</font>, so that trap does not apply."
     ))
-    st.append(sub("2.3 GROUP BY"))
+    st.append(sub("2.3 EXISTS and correlated subqueries"))
     st.append(para(
-        "<font face='Courier'>GROUP BY department</font> makes one group per "
-        "distinct department, then evaluates the aggregates inside each group. "
-        "Every column in the <font face='Courier'>SELECT</font> list must be "
-        "either grouped or aggregated. Question 8 therefore returns four rows, "
-        "each with its own count, total, average, highest salary and lowest salary."
+        "A correlated subquery mentions a column from the outer query, so it "
+        "is re-evaluated for each outer row. "
+        "<font face='Courier'>EXISTS</font> is true when the inner query returns "
+        "at least one row; the selected columns do not matter, which is why "
+        "question 8 selects the constant 1. It lists everyone who has a "
+        "colleague in the same department on a higher salary — everyone except "
+        "the highest-paid person in each department. Question 4 uses the same "
+        "correlation to keep the row whose salary equals the department maximum. "
+        "Question 9 compares each salary with the average of that employee's "
+        "own department, which is a different number from the overall average "
+        "used in question 3."
     ))
-    st.append(sub("2.4 WHERE and HAVING"))
+    st.append(sub("2.4 Second-highest salary"))
     st.append(para(
-        "<font face='Courier'>WHERE</font> filters rows before the aggregates run. "
-        "Question 11 uses it to keep only CSE, then computes one count, one total "
-        "and one average for those five rows. "
-        "<font face='Courier'>HAVING</font> filters groups after the aggregates "
-        "are computed, so it can test <font face='Courier'>AVG(salary)</font> or "
-        "<font face='Courier'>COUNT(*)</font>. "
-        "<font face='Courier'>WHERE AVG(salary) &gt; 55000</font> is illegal. "
-        "Question 9 keeps departments whose average is above 55000 (Civil at "
-        "45000.0 drops out). Question 10 keeps departments with more than three "
-        "employees (Civil, with three, drops out). Question 12 groups by city "
-        "and keeps the five cities that appear twice."
+        "Question 5 asks, word for word: &ldquo;Find the 2nd highest salary "
+        "of the employees.&rdquo; The nested query is "
+        "<font face='Courier'>SELECT MAX(salary) FROM employee WHERE salary "
+        "&lt; (SELECT MAX(salary) FROM employee)</font>. The inner "
+        "<font face='Courier'>MAX</font> is the top salary (92000). The outer "
+        "<font face='Courier'>MAX</font> is the largest salary strictly below "
+        "that value, which is the next distinct salary. SQLite returns one "
+        "row: 90000. The same pattern still means second-highest distinct "
+        "salary if two people share the top salary."
+    ))
+    st.append(sub("2.5 A nested aggregate"))
+    st.append(para(
+        "Question 10 asks which department has the greatest total salary. "
+        "The inner query groups by department and the middle query takes "
+        "<font face='Courier'>MAX</font> of those totals. The outer "
+        "<font face='Courier'>HAVING</font> keeps the department whose "
+        "<font face='Courier'>SUM(salary)</font> equals that maximum. "
+        "CSE's total is 296000, which is greater than ECE (235000), "
+        "Mechanical (232000) and Civil (135000)."
     ))
 
     st.append(heading("3. Schema"))
     st.append(para(
         "One table, <font face='Courier'>employee</font>, holds six attributes. "
+        "It is the same table and the same 16 rows as Experiment 5, created "
+        "again here so this script runs on its own. "
         "<font face='Courier'>sr_no</font> is the employee number (primary key). "
-        "<font face='Courier'>department</font> and <font face='Courier'>city</font> "
-        "are stored as names so <font face='Courier'>GROUP BY</font> results can "
-        "be read without a second lookup. <font face='Courier'>salary</font> is a "
-        "positive monthly amount in rupees."
+        "<font face='Courier'>salary</font> is a positive monthly amount in rupees."
     ))
     st.append(table(
         [
@@ -747,11 +805,14 @@ def build_story(*, include_cover: bool = True) -> list:
 
     st.append(heading("4. Questions"))
     st.append(para(
-        "Twelve lab questions. Questions 1 and 2 build the table. "
-        "Questions 3–7 are aggregates over every employee. "
-        "Question 8 groups by department. Questions 9, 10 and 12 filter groups "
-        f"with {sql_kw('HAVING')}. Question 11 filters rows with {sql_kw('WHERE')} "
-        "before the aggregates, which is how a single department is summarised."
+        "Ten lab questions. Questions 1 and 2 build the table. "
+        "Question 3 compares each salary with one overall average. "
+        "Question 4 finds the highest salary in each department. "
+        "Question 5 is: Find the 2nd highest salary of the employees. "
+        f"Questions 6 and 7 use {sql_kw('IN')} and {sql_kw('NOT IN')}. "
+        f"Question 8 uses {sql_kw('EXISTS')}. Question 9 is a correlated "
+        "department average. Question 10 nests an aggregate to find the "
+        "department with the greatest total salary."
     ))
     st.extend(questions_flow())
 
@@ -759,16 +820,19 @@ def build_story(*, include_cover: bool = True) -> list:
     st.append(para(
         "Drop <font face='Courier'>employee</font> if it already exists so the "
         "script can be re-run. Create the table, insert the 16 rows, then run "
-        "each query in order. Grouped results are ordered so the same script "
-        "prints the same rows on every run. The SQL for each question:"
+        "each query in order. Results that return more than one row are ordered "
+        "so the same script prints the same rows on every run. "
+        "The SQL for each question:"
     ))
     st.append(solutions_table())
 
     st.append(heading("6. Source Code"))
     st.append(para(
         "SQLite script used in the lab compiler "
-        "(<font face='Courier'>30-09-2026/employee.sql</font>). "
-        "For the class SQL Server, run <font face='Courier'>employee.sqlserver.sql</font>."
+        "(<font face='Courier'>30-09-2026-2/employee.sql</font>). "
+        "For the class SQL Server, run <font face='Courier'>employee.sqlserver.sql</font>. "
+        "The folder name ends in <font face='Courier'>-2</font> because this is "
+        "the second experiment dated 30 September 2026."
     ))
     st.append(code_block(sql_text, size=6.2, leading=7.6))
 
@@ -778,9 +842,7 @@ def build_story(*, include_cover: bool = True) -> list:
         "<font face='Courier'>CREATE</font> prints a status line and "
         "<font face='Courier'>INSERT</font> prints the row count. "
         "Each <font face='Courier'>SELECT</font> prints the result set that "
-        "SQLite returned. Whole-number salaries print as integers; "
-        "<font face='Courier'>AVG</font> prints a real (56125.0, 59200.0, "
-        "58750.0, and so on)."
+        "SQLite returned. Whole-number salaries print as integers."
     ))
     st.append(code_block(output, size=5.5, leading=6.7))
 
@@ -794,46 +856,45 @@ def build_story(*, include_cover: bool = True) -> list:
         [
             ["Q. No.", "Rows", "What the result shows"],
             ["1", "—", "Table employee created with 6 attributes"],
-            ["2", "16", "16 rows inserted across CSE, Mechanical, ECE and Civil"],
-            ["3", "1", "COUNT(*) = 16 employees"],
-            ["4", "1", "COUNT(DISTINCT department) = 4"],
-            ["5", "1", "SUM(salary) = 898000"],
-            ["6", "1", "AVG(salary) = 56125.0"],
-            ["7", "1", "MAX = 92000 and MIN = 28000"],
-            ["8", "4", "COUNT, SUM, AVG, MAX and MIN for each of the 4 departments"],
-            ["9", "3", "CSE (59200.0), ECE (58750.0), Mechanical (58000.0); Civil excluded"],
-            ["10", "3", "CSE (5), ECE (4), Mechanical (4); Civil has only 3"],
-            ["11", "1", "CSE only: 5 employees, total 296000, average 59200.0"],
-            ["12", "5", "Bangalore, Chennai, Delhi, Hyderabad and Mumbai, 2 each"],
+            ["2", "16", "16 rows inserted, the same seed as Experiment 5"],
+            ["3", "7", "Names earning more than the overall average 56125.0"],
+            ["4", "4", "Rajesh Kumar, Sneha Reddy, Priya Nair, Vikram Singh"],
+            ["5", "1", "2nd highest salary = 90000"],
+            ["6", "13", "IN: employees in CSE, Mechanical or ECE (a Professor exists)"],
+            ["7", "3", "NOT IN: Rahul Das, Sneha Reddy and Tushar Rao (Civil)"],
+            ["8", "12", "EXISTS: everyone except the 4 department-wise top salaries"],
+            ["9", "6", "Salary greater than that department's own average"],
+            ["10", "1", "CSE, total salary 296000, the greatest department total"],
         ],
         col_widths=[CONTENT_W * 0.12, CONTENT_W * 0.10, CONTENT_W * 0.68],
         pad=4,
     ))
     st.append(Spacer(1, 0.35 * cm))
     st.append(para(
-        "Department totals from question 8 add up to the overall total: "
-        "296000 + 135000 + 235000 + 232000 = 898000, and 5 + 3 + 4 + 4 = 16. "
-        "The CSE row of that result is the same triple question 11 prints on "
-        "its own (5, 296000, 59200.0). Questions 9 and 10 both drop Civil, "
-        "for different reasons: its average is 45000.0, and it has only three "
-        "employees. Question 12 keeps the five cities that are shared and drops "
-        "Ahmedabad, Pune, Jaipur, Kochi, Kolkata and Nagpur."
+        "Question 3 returns seven employees above 56125.0, including Neha Gupta "
+        "at 58000. Question 9 returns six employees above their own department "
+        "average and does not include her: the ECE average is 58750.0. "
+        "Fatima Khan (56000) is below both the company average and the CSE "
+        "average (59200.0). Rahul Das earns exactly the Civil average (45000), "
+        "so the strict comparison in question 9 excludes him, and 45000 is also "
+        "below the company average. Question 8 returns 12 rows: 16 employees "
+        "minus the four department maxima that question 4 lists. "
+        "Question 5 returns one value, 90000, the largest salary below 92000."
     ))
 
     st.append(heading("9. Conclusion"))
     st.append(para(
-        "Aggregate functions collapse many rows into one value. "
-        "<font face='Courier'>COUNT</font> answers how many, "
-        "<font face='Courier'>SUM</font> and <font face='Courier'>AVG</font> "
-        "answer how much, and <font face='Courier'>MAX</font> / "
-        "<font face='Courier'>MIN</font> answer the extremes. "
-        "<font face='Courier'>GROUP BY</font> repeats that collapse once per "
-        "group. <font face='Courier'>WHERE</font> chooses the rows that enter "
-        "the calculation; <font face='Courier'>HAVING</font> chooses which "
-        "groups survive it. These are the tools for summary questions. "
-        "Questions that compare a row with a computed value — more than the "
-        "average, the highest in each department — are nested queries, and "
-        "they are Experiment 6."
+        "A nested query uses one result as the input of another. A scalar "
+        "subquery supplies a single comparison value. "
+        "<font face='Courier'>IN</font> and <font face='Courier'>NOT IN</font> "
+        "test membership. <font face='Courier'>EXISTS</font> tests whether any "
+        "inner row matches. When the inner query refers to the outer row it is "
+        "correlated, so each employee can be compared with their own department "
+        "rather than with the whole company. The same nesting also answers "
+        "&ldquo;which group has the greatest total?&rdquo; by taking "
+        "<font face='Courier'>MAX</font> of a grouped <font face='Courier'>SUM</font>. "
+        "Aggregate functions, which compute those averages and totals, are "
+        "Experiment 5."
     ))
     return st
 
@@ -842,7 +903,7 @@ def build() -> None:
     st = build_story(include_cover=True)
     write_report(
         OUT_PDF,
-        f"DBMS Lab · 30-09-2026 · Aggregate Functions · {STUDENT['name']}",
+        f"DBMS Lab · 30-09-2026 · Nested Queries · {STUDENT['name']}",
         st,
     )
     print(f"Wrote {OUT_PDF}")
