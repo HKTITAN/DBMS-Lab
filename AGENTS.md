@@ -10,7 +10,7 @@ These are working notes for editing this tree. Do not break existing labs.
 
 ## Layout
 
-Dated lab folders `DD-MM-YYYY/` (same string as `labs.json` `id` / `folder`):
+Dated lab folders use the same string as `labs.json` `id` / `folder`. One experiment on a date is `DD-MM-YYYY/`. A second experiment on that same date is `DD-MM-YYYY-2/` (still one URL segment, so `/lab/:id` keeps matching). Both cards use that calendar date. Experiment numbers stay sequential.
 
 | Folder | Exp | Hub `type` | Typical files |
 |--------|-----|------------|----------------|
@@ -18,6 +18,8 @@ Dated lab folders `DD-MM-YYYY/` (same string as `labs.json` `id` / `folder`):
 | `26-08-2026/` | 2 | `sql` | `employees.sql`, `employees.sqlserver.sql`, `generate_report.py`, PDF report |
 | `02-09-2026/` | 3 | `sql` | `joins.sql`, `joins.sqlserver.sql`, `generate_report.py`, PDF report |
 | `09-09-2026/` | 4 | `sql` | `employee.sql`, `employee.sqlserver.sql`, `generate_report.py`, PDF report (SELECT + CSE/Mechanical UNION / UNION ALL / INTERSECT) |
+| `30-09-2026/` | 5 | `sql` | `employee.sql`, `employee.sqlserver.sql`, `generate_report.py`, PDF report (SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING) |
+| `30-09-2026-2/` | 6 | `sql` | `employee.sql`, `employee.sqlserver.sql`, `generate_report.py`, PDF report (nested queries, including the 2nd highest salary) |
 
 Hub (site root): `index.html`, `app.js`, `styles.css`, `labs.json`, `vercel.json`, `serve.json`.
 
@@ -29,7 +31,7 @@ Not in the hub: `TA-1/`, `TA-Phase-2/` (term papers), `banking_er_diagram.excali
 
 ## How to add a lab
 
-1. New folder `DD-MM-YYYY/` matching the lab date.
+1. New folder `DD-MM-YYYY/` matching the lab date. If that date already has a lab, use `DD-MM-YYYY-2/` instead (same `id` / `folder`; do not use a slash — `/lab/:id` is one path segment).
 2. SQLite-first script (`DROP TABLE IF EXISTS` so it re-runs). Optional `*.sqlserver.sql` twin for the class server — same questions, T-SQL types.
 3. For a PDF report lab: `generate_report.py` that writes the standalone PDF, then run it.
 4. Register a newest-first object in `labs.json` (`id`/`folder` = folder name, `experiment` number, `sqlFile` + `report` for `type: "sql"`, or `directoryTabs` for `type: "directory"`).
