@@ -1,5 +1,19 @@
 [
   {
+    "id": "30-09-2026",
+    "folder": "30-09-2026",
+    "date": "30 Sep 2026",
+    "experiment": "5",
+    "title": "Aggregates & Nested Queries",
+    "subtitle": "SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING",
+    "topic": "Lab questions: CREATE employee, insert 16 rows, then aggregate functions and nested queries (subqueries, IN, NOT IN, EXISTS).",
+    "type": "sql",
+    "sqlFile": "employee.sql",
+    "report": "DBMS_Lab_Aggregates_Report.pdf",
+    "color": "#0EA5A0",
+    "defaultTab": "report"
+  },
+  {
     "id": "09-09-2026",
     "folder": "09-09-2026",
     "date": "09 Sep 2026",

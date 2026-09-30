@@ -10,6 +10,8 @@ Each lab has its own page with in-app tabs — no external redirects:
 
 | Route | Lab |
 |-------|-----|
+| `/lab/30-09-2026/report` | Aggregates & Nested Queries — PDF report |
+| `/lab/30-09-2026/sql` | Aggregates & Nested Queries — playground |
 | `/lab/09-09-2026/report` | SELECT Queries — PDF report |
 | `/lab/09-09-2026/sql` | SELECT Queries — playground |
 | `/lab/02-09-2026/report` | SQL Joins — PDF report |
@@ -41,6 +43,7 @@ python -m http.server 8080  # home only unless you add the same rewrites
 | [26-08-2026](26-08-2026/) | CREATE TABLE & ALTER TABLE (rename column) | `employees.sql`, PDF report |
 | [02-09-2026](02-09-2026/) | SQL Joins (CROSS, NATURAL, INNER, OUTER, SELF) | `joins.sql`, PDF report |
 | [09-09-2026](09-09-2026/) | SELECT queries (DISTINCT, WHERE, BETWEEN, IN, ORDER BY) plus CSE/Mechanical UNION, UNION ALL, INTERSECT | `employee.sql`, PDF report |
+| [30-09-2026](30-09-2026/) | Aggregate functions (SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING) and nested queries | `employee.sql`, PDF report |
 
 ## Regenerating PDF reports
 
@@ -48,6 +51,7 @@ python -m http.server 8080  # home only unless you add the same rewrites
 cd 26-08-2026 && python generate_report.py
 cd 02-09-2026 && python generate_report.py
 cd 09-09-2026 && python generate_report.py
+cd 30-09-2026 && python generate_report.py
 python generate_practical_file.py   # merged DBMS_Practical_File.pdf
 ```
 
