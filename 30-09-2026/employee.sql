@@ -4,7 +4,6 @@
 -- SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING
 -- SQLite  (sql.js compiler / DB Browser / sqlite3)
 -- For the class SQL Server, run employee.sqlserver.sql instead.
--- Nested queries are Experiment 6 (30-09-2026-2).
 --
 -- Lab questions
 -- 1. Create a table employee with the following attributes:
