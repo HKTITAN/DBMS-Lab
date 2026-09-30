@@ -547,7 +547,7 @@ def table(rows, col_widths=None, pad=5):
 
 
 def questions_flow() -> list:
-    """Numbered lab-sheet list: wrapping questions, nested attributes on 1."""
+    """Numbered lab-sheet list: wrapping questions, indented attributes on 1."""
     num_w = 1.55 * cm
     text_w = CONTENT_W - num_w
     flow: list = []
@@ -674,7 +674,7 @@ def build_story(*, include_cover: bool = True) -> list:
         "functions: <font face='Courier'>COUNT</font>, <font face='Courier'>SUM</font>, "
         "<font face='Courier'>AVG</font>, <font face='Courier'>MAX</font> and "
         "<font face='Courier'>MIN</font>, including <font face='Courier'>GROUP BY</font> "
-        "and <font face='Courier'>HAVING</font>. Nested queries are Experiment 6."
+        "and <font face='Courier'>HAVING</font>."
     ))
 
     st.append(heading("2. Theory"))
@@ -830,10 +830,8 @@ def build_story(*, include_cover: bool = True) -> list:
         "<font face='Courier'>GROUP BY</font> repeats that collapse once per "
         "group. <font face='Courier'>WHERE</font> chooses the rows that enter "
         "the calculation; <font face='Courier'>HAVING</font> chooses which "
-        "groups survive it. These are the tools for summary questions. "
-        "Questions that compare a row with a computed value — more than the "
-        "average, the highest in each department — are nested queries, and "
-        "they are Experiment 6."
+        "groups survive it. These are the tools for summary questions: "
+        "how many employees, how much they earn, and which groups pass a test."
     ))
     return st
 

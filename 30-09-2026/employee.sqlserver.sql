@@ -3,7 +3,6 @@
 -- Employee table: CREATE, seed 16 rows, then aggregate functions
 -- SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING
 -- Microsoft SQL Server (T-SQL) — use this on the class server
--- Nested queries are Experiment 6 (30-09-2026-2).
 --
 -- Lab questions
 -- 1. Create a table employee with the following attributes:

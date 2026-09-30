@@ -46,7 +46,7 @@ python -m http.server 8080  # home only unless you add the same rewrites
 | [02-09-2026](02-09-2026/) | SQL Joins (CROSS, NATURAL, INNER, OUTER, SELF) | `joins.sql`, PDF report |
 | [09-09-2026](09-09-2026/) | SELECT queries (DISTINCT, WHERE, BETWEEN, IN, ORDER BY) plus CSE/Mechanical UNION, UNION ALL, INTERSECT | `employee.sql`, PDF report |
 | [30-09-2026](30-09-2026/) | Aggregate functions (SUM, AVG, MAX, MIN, COUNT, GROUP BY, HAVING) | `employee.sql`, PDF report |
-| [30-09-2026-2](30-09-2026-2/) | Nested queries (subqueries, IN, NOT IN, EXISTS, 2nd highest salary). Same date as Experiment 5; folder suffix `-2` | `employee.sql`, PDF report |
+| [30-09-2026-2](30-09-2026-2/) | Nested queries (subqueries, IN, NOT IN, EXISTS, 2nd highest salary). Second lab dated 30 Sep 2026; folder suffix `-2` | `employee.sql`, PDF report |
 
 ## Regenerating PDF reports
 

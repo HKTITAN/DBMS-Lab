@@ -5,7 +5,6 @@
 -- Folder 30-09-2026-2: second experiment on 30 Sep 2026.
 -- SQLite  (sql.js compiler / DB Browser / sqlite3)
 -- For the class SQL Server, run employee.sqlserver.sql instead.
--- Aggregate functions are Experiment 5 (30-09-2026).
 --
 -- Lab questions
 -- 1. Create a table employee with the following attributes:
@@ -44,7 +43,7 @@ CREATE TABLE employee (
 
 -- ------------------------------------------------------------
 -- 2. Insert 16 rows in the above mentioned table
---    • same seed as Experiment 5 so the two labs compare
+--    • four departments: CSE, Mechanical, ECE, Civil
 --    • Civil has no Professor, so NOT IN is non-empty
 --    • the highest salary (92000) and the second-highest (90000)
 --      are each earned by exactly one employee

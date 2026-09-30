@@ -86,7 +86,7 @@ QUESTIONS = [
         "num": "2",
         "html": "Insert 16 rows in the above mentioned table.",
         "note": (
-            "Same 16 rows as Experiment 5. Civil has no Professor, so "
+            "Civil has no Professor, so "
             f"{sql_kw('NOT IN')} is non-empty. The highest salary (92000) and "
             "the second-highest salary (90000) are each earned by one employee. "
             "Neha Gupta (ECE, 58000) is above the company average and below "
@@ -707,14 +707,14 @@ def build_story(*, include_cover: bool = True) -> list:
             st, "6",
             "Nested Queries",
             "Subqueries, IN, NOT IN, EXISTS, correlated subqueries",
-            "employee (16 rows; same seed as Experiment 5)",
+            "employee (16 rows; CSE, Mechanical, ECE, Civil)",
             LAB_DATE,
         )
 
     st.append(heading("1. Aim"))
     st.append(para(
-        "To create the same <font face='Courier'>employee</font> table used in "
-        "Experiment 5, insert the same 16 rows, and answer the lab questions "
+        "To create an <font face='Courier'>employee</font> table, insert 16 rows "
+        "across four departments, and answer the lab questions "
         "with nested queries: a scalar subquery, the highest salary in each "
         "department, the second-highest salary, <font face='Courier'>IN</font> / "
         "<font face='Courier'>NOT IN</font>, <font face='Courier'>EXISTS</font>, "
@@ -784,8 +784,8 @@ def build_story(*, include_cover: bool = True) -> list:
     st.append(heading("3. Schema"))
     st.append(para(
         "One table, <font face='Courier'>employee</font>, holds six attributes. "
-        "It is the same table and the same 16 rows as Experiment 5, created "
-        "again here so this script runs on its own. "
+        "This script creates the table and inserts the 16 rows so the lab "
+        "runs on its own. "
         "<font face='Courier'>sr_no</font> is the employee number (primary key). "
         "<font face='Courier'>salary</font> is a positive monthly amount in rupees."
     ))
@@ -856,7 +856,7 @@ def build_story(*, include_cover: bool = True) -> list:
         [
             ["Q. No.", "Rows", "What the result shows"],
             ["1", "—", "Table employee created with 6 attributes"],
-            ["2", "16", "16 rows inserted, the same seed as Experiment 5"],
+            ["2", "16", "16 rows inserted across CSE, Mechanical, ECE and Civil"],
             ["3", "7", "Names earning more than the overall average 56125.0"],
             ["4", "4", "Rajesh Kumar, Sneha Reddy, Priya Nair, Vikram Singh"],
             ["5", "1", "2nd highest salary = 90000"],
@@ -892,9 +892,7 @@ def build_story(*, include_cover: bool = True) -> list:
         "correlated, so each employee can be compared with their own department "
         "rather than with the whole company. The same nesting also answers "
         "&ldquo;which group has the greatest total?&rdquo; by taking "
-        "<font face='Courier'>MAX</font> of a grouped <font face='Courier'>SUM</font>. "
-        "Aggregate functions, which compute those averages and totals, are "
-        "Experiment 5."
+        "<font face='Courier'>MAX</font> of a grouped <font face='Courier'>SUM</font>."
     ))
     return st
 
